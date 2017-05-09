@@ -3,7 +3,7 @@ package traffic
 import akka.actor.ActorRef
 
 
-case object UpdateCount
+case class UpdateCountFor(value: String)
 
 
 case class EmitCount(emitter: ActorRef)
