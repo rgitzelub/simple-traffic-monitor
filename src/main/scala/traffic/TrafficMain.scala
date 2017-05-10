@@ -11,7 +11,7 @@ object TrafficMain {
   def main(args: Array[String]): Unit = {
     val system = ActorSystem("traffic")
 
-    val N = 1000000
+    val N = 10
 
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
@@ -24,7 +24,7 @@ object TrafficMain {
       counter ! UpdateCountFor(v)
     }
 
-    // at this point the cascading is still happening, we've only for sure sent the top-level message
+    // at this point the othe cascading is still happening, we've only for sure sent the top-level message
 
     println("emitting...")
     counter ! EmitCount(emitter)

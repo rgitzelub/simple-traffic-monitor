@@ -2,31 +2,30 @@ package traffic
 
 import akka.actor.{Actor, ActorRef, Props}
 
-import scala.collection.mutable
-
 
 trait Counting {
   this: Actor =>
 
   var count = 0
-
-  val countingBehaviour: Receive = {
-    case UpdateCountFor(_) =>
-      count += 1
-  }
 }
 
 
 
 class NodeCount(name: String) extends Actor with Counting {
-  private val children = mutable.HashMap[Int,ActorRef]()
-
-  private def newChild(c: Char) = {
-    val leafName = s"${name}-${c}"
-    context.system.actorOf(Props(classOf[LeafCount], leafName), leafName)
+  private def newChild(name: String) = {
+    context.actorOf(Props(classOf[LeafCount], name), name)
   }
 
-  private def childFor(value: String) = children.getOrElseUpdate(value.last, newChild(value.last))
+  // we can use anything for the name, and if we use the 'key' in the name uniquely,
+  //  we don't need to explicitly keep a map of keys to actors (so long as we don't
+  //  create any other children)
+  private def childName(value: String) = "leaf" + value.substring(value.length-2)
+
+  // if we don't already have a child for the key, create one
+  private def childFor(value: String): ActorRef = {
+    val name = childName(value)
+    context.child(name).getOrElse(newChild(name))
+  }
 
 
   def receive = {
@@ -35,7 +34,7 @@ class NodeCount(name: String) extends Actor with Counting {
       count += 1
 
     case msg :EmitCount =>
-      children.values.foreach(_ ! msg)
+      context.children.foreach(_ ! msg)
       msg.emitter ! CountToEmit(name, count)
   }
 }
