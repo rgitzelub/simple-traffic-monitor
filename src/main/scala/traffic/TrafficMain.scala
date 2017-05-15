@@ -5,23 +5,50 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Terminated
 import scala.util.Random
 
 
+class ThirdLastCharNodeCount(name: String) extends NodeCount[String](name) {
+  def childName(value: String) = name + "-" + "node" + value.charAt(value.length-3)
+
+  def childClass = classOf[SecondLastCharNodeCount]
+}
+
+
+class SecondLastCharNodeCount(name: String) extends NodeCount[String](name) {
+  def childName(value: String) = name + "-" + "node" + value.charAt(value.length-2)
+
+  def childClass = classOf[LastCharNodeCount]
+}
+
+
+class LastCharNodeCount(name: String) extends NodeCount[String](name) {
+  def childName(value: String) = name + "-" + "leaf" + value.last.toString
+
+  def childClass = classOf[MyLeafCount]
+}
+
+class MyLeafCount(name: String) extends LeafCount[String](name) {
+}
+
+
+// ----------------------------------------------
+
 
 object TrafficMain {
 
   def main(args: Array[String]): Unit = {
     val system = ActorSystem("traffic")
 
-    val N = 10
 
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
-    val counter = system.actorOf(Props(classOf[NodeCount], "counter"), "counter")
+    val counter = system.actorOf(Props(classOf[ThirdLastCharNodeCount], "counter"), "counter")
 
     println("updating...")
-    1.to(N).foreach { _ =>
-      val v = Random.nextInt(1000).toString
-      counter ! UpdateCountFor(v)
+    val list = 1.to(1000).map { _ => Random.nextInt(1000) + 1000 }
+//    val list = List("10", "12", "32", "30", "12", "13")
+    list.foreach{ v =>
+      println(v)
+      counter ! UpdateCountFor(v.toString)
     }
 
     // at this point the othe cascading is still happening, we've only for sure sent the top-level message
