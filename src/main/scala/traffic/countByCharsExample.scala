@@ -34,9 +34,9 @@ class MyLeafCount(name: String) extends LeafCount[String](name) {
 
 object TrafficMain {
 
-  def main(args: Array[String]): Unit = {
-    val system = ActorSystem("traffic")
+  val system = ActorSystem("traffic")
 
+  def main(args: Array[String]): Unit = {
 
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
@@ -66,15 +66,4 @@ object TrafficMain {
 
     emitter ! Stop
   }
-
-  class Terminator(ref: ActorRef) extends Actor with ActorLogging {
-    context watch ref
-
-    def receive = {
-      case Terminated(_) =>
-        log.info(s"${ref} has terminated, shutting down system")
-        context.system.terminate()
-    }
-  }
-
 }
