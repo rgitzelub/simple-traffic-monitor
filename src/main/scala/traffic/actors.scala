@@ -7,18 +7,21 @@ trait Counting {
   this: Actor =>
 
   var count = 0
+
+  def label: String
 }
 
 
 
-abstract class NodeCount[T](name: String) extends Actor with Counting {
-  private def newChild(name: String) = {
-    context.actorOf(Props(childClass, name), name)
+abstract class NodeCount[T](val label: String) extends Actor with Counting {
+  private def newChild(value: T) = {
+    context.actorOf(Props(childClass, childNodeLabel(value)), childActorName(value))
   }
 
 
   // TODO: protect these
-  def childName(value: T): String
+  def childNodeLabel(value: T): String
+  def childActorName(value: T): String
   def childClass: Class[_]
 
   // we can use anything for the name, and if we use the 'key' in the name uniquely,
@@ -28,8 +31,7 @@ abstract class NodeCount[T](name: String) extends Actor with Counting {
 
   // if we don't already have a child for the key, create one
   private def childFor(value: T): ActorRef = {
-    val name = childName(value)
-    context.child(name).getOrElse(newChild(name))
+    context.child(childActorName(value)).getOrElse(newChild(value))
   }
 
 
@@ -40,16 +42,16 @@ abstract class NodeCount[T](name: String) extends Actor with Counting {
 
     case msg :EmitCount =>
       context.children.foreach(_ ! msg)
-      msg.emitter ! CountToEmit(name, count)
+      msg.emitter ! CountToEmit(label, count)
   }
 }
 
-abstract class LeafCount[T](name: String) extends Actor with Counting {
+abstract class LeafCount[T](val label: String) extends Actor with Counting {
   def receive = {
     case UpdateCountFor(_) =>
       count += 1
 
     case EmitCount(emitter) =>
-      emitter ! CountToEmit(name, count)
+      emitter ! CountToEmit(label, count)
   }
 }

@@ -6,22 +6,22 @@ import scala.util.Random
 
 
 class ThirdLastCharNodeCount(name: String) extends NodeCount[String](name) {
-  def childName(value: String) = name + "-" + "node" + value.charAt(value.length-3)
-
+  def childNodeLabel(value: String) = "" + value.charAt(value.length-3)
+  def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-3)
   def childClass = classOf[SecondLastCharNodeCount]
 }
 
 
 class SecondLastCharNodeCount(name: String) extends NodeCount[String](name) {
-  def childName(value: String) = name + "-" + "node" + value.charAt(value.length-2)
-
+  def childNodeLabel(value: String) = "" + value.charAt(value.length-2)
+  def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-2)
   def childClass = classOf[LastCharNodeCount]
 }
 
 
 class LastCharNodeCount(name: String) extends NodeCount[String](name) {
-  def childName(value: String) = name + "-" + "leaf" + value.last.toString
-
+  def childNodeLabel(value: String) = "" + value.charAt(value.length-1)
+  def childActorName(value: String) = name + "-" + "leaf" + value.last.toString
   def childClass = classOf[MyLeafCount]
 }
 
