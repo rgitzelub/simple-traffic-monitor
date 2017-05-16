@@ -3,27 +3,37 @@ package traffic
 
 import akka.actor._
 
+import scala.util.Random
+
 
 
 case class IpAddress(a: Int, b: Int, c: Int, d: Int)
 
+object IpAddress {
+  def random = IpAddress(
+    Random.nextInt(4) + 1,
+    Random.nextInt(4) + 1,
+    Random.nextInt(4) + 1,
+    1
+  )
+}
 
 
 class IpAddressCount(name: String) extends NodeCount[IpAddress](name) {
-  def childNodeLabel(value: IpAddress) = s"subnet ${value.a}"
+  def childNodeLabel(value: IpAddress) = s"subnet ${value.a}.x.x.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.a
   val childClass = classOf[ACount]
 }
 
 class ACount(name: String) extends NodeCount[IpAddress](name) {
-  def childNodeLabel(value: IpAddress) = s"subnet ${value.a}.${value.b}"
+  def childNodeLabel(value: IpAddress) = s"subnet ${value.a}.${value.b}.x.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.b
   val childClass = classOf[BCount]
 }
 
 
 class BCount(name: String) extends NodeCount[IpAddress](name) {
-  def childNodeLabel(value: IpAddress) = s"subnet ${value.a}.${value.b}.${value.c}"
+  def childNodeLabel(value: IpAddress) = s"subnet ${value.a}.${value.b}.${value.c}.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.c
   val childClass = classOf[CCount]
 }
@@ -53,20 +63,24 @@ object IpAddessMain {
     val counter = system.actorOf(Props(classOf[IpAddressCount], "counter"), "counter")
 
     println("updating...")
-    val list = List(
-      new IpAddress(1, 2, 3, 4),
-      new IpAddress(1, 2, 3, 4),
-      new IpAddress(1, 2, 3, 5),
-      new IpAddress(1, 2, 3, 6),
-      new IpAddress(1, 2, 13, 4),
-      new IpAddress(1, 2, 13, 4),
-      new IpAddress(11, 12, 13, 15)
-    )
+//    val list = List(
+//      new IpAddress(1, 2, 3, 4),
+//      new IpAddress(1, 2, 3, 4),
+//      new IpAddress(1, 2, 3, 5),
+//      new IpAddress(1, 2, 3, 6),
+//      new IpAddress(1, 2, 13, 4),
+//      new IpAddress(1, 2, 13, 4),
+//      new IpAddress(11, 12, 13, 15)
+//    )
+
+    val list = 1.to(1000).map(_ => IpAddress.random)
 
     list.foreach{ v =>
       //println(v)
       counter ! UpdateCountFor(v)
     }
+
+    Thread.sleep(200)
 
     // at this point the other cascading is still happening, we've only for sure sent the top-level message
 
@@ -79,7 +93,7 @@ object IpAddessMain {
 
 
     // how do we wait until the messages to emitter have cascade through all the actors?
-    Thread.sleep(1000)
+    Thread.sleep(2000)
 
     emitter ! Stop
   }
