@@ -1,6 +1,23 @@
 package traffic
 
 import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
+
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
+
+case class CountTreeNode(label: String, count: Int, children: Iterable[CountTreeNode]) {
+  def print(indent: Int): Unit = {
+//    println(children)
+    println(s"|${"  " * indent}${label}: ${count}")
+    children.foreach(c => c.print(indent + 1))
+  }
+}
+
+case object AskForCountTree
 
 
 trait Counting {
@@ -49,6 +66,21 @@ abstract class NodeCount[T](val label: String) extends Actor with Counting with 
       childFor(value) ! UpdateCountFor(value)
       count += 1
 
+    case AskForCountTree =>
+      // TODO: really need these?
+      implicit val timeout = Timeout(1 seconds)
+      import context.dispatcher
+
+println(label + " node asked from " + sender.path.name)
+      val fs = context.children.map{ ask(_, AskForCountTree).mapTo[CountTreeNode] }
+      val s = sender // http://stackoverflow.com/a/25402857
+      Future.sequence(fs).map{ counts =>
+//CountTreeNode(label, count, counts).print(0)
+        println(label + " sender now " + s.path.name)
+        s ! CountTreeNode(label, count, counts)
+        println(label + " node responded with "+ counts)
+      }
+
     case msg :EmitCount =>
       context.children.foreach(_ ! msg)
       msg.emitter ! CountToEmit(label, count)
@@ -59,6 +91,12 @@ abstract class LeafCount[T](val label: String) extends Actor with Counting {
   def receive = {
     case UpdateCountFor(_) =>
       count += 1
+
+    case AskForCountTree =>
+println(label + " asked")
+      sender ! CountTreeNode(label, count, List())
+      CountTreeNode(label, count, List()).print(0)
+println(label + " responded with " + count)
 
     case EmitCount(emitter) =>
       emitter ! CountToEmit(label, count)

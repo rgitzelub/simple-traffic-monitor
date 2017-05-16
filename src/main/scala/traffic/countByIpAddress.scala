@@ -1,9 +1,17 @@
 package traffic
 
 
-import akka.actor._
+import java.util.concurrent.TimeUnit
 
+import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.Random
+
+import scala.concurrent.duration._
 
 
 
@@ -63,17 +71,17 @@ object IpAddessMain {
     val counter = system.actorOf(Props(classOf[IpAddressCount], "counter"), "counter")
 
     println("updating...")
-//    val list = List(
-//      new IpAddress(1, 2, 3, 4),
-//      new IpAddress(1, 2, 3, 4),
-//      new IpAddress(1, 2, 3, 5),
-//      new IpAddress(1, 2, 3, 6),
-//      new IpAddress(1, 2, 13, 4),
-//      new IpAddress(1, 2, 13, 4),
-//      new IpAddress(11, 12, 13, 15)
-//    )
+    val list = List(
+      new IpAddress(1, 2, 3, 4),
+      new IpAddress(1, 2, 3, 4),
+      new IpAddress(1, 2, 3, 5),
+      new IpAddress(1, 2, 3, 6),
+      new IpAddress(1, 2, 13, 4),
+      new IpAddress(1, 2, 13, 4),
+      new IpAddress(11, 12, 13, 15)
+    )
 
-    val list = 1.to(1000).map(_ => IpAddress.random)
+//    val list = 1.to(10).map(_ => IpAddress.random)
 
     list.foreach{ v =>
       //println(v)
@@ -93,7 +101,17 @@ object IpAddessMain {
 
 
     // how do we wait until the messages to emitter have cascade through all the actors?
-    Thread.sleep(2000)
+//    Thread.sleep(2000)
+
+    implicit val timeout = Timeout(3 seconds)
+//    import system.dispatcher
+
+    val r = Await.result(
+      ask(counter, AskForCountTree),
+      Duration(6, TimeUnit.SECONDS)
+    )
+
+    r.asInstanceOf[CountTreeNode].print(0)
 
     emitter ! Stop
   }
