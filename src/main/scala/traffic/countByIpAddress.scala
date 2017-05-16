@@ -19,10 +19,10 @@ case class IpAddress(a: Int, b: Int, c: Int, d: Int)
 
 object IpAddress {
   def random = IpAddress(
-    Random.nextInt(4) + 1,
-    Random.nextInt(4) + 1,
-    Random.nextInt(4) + 1,
-    1
+    Random.nextInt(16) + 1,
+    Random.nextInt(16) + 1,
+    Random.nextInt(32) + 1,
+    Random.nextInt(4) + 1
   )
 }
 
@@ -71,17 +71,18 @@ object IpAddessMain {
     val counter = system.actorOf(Props(classOf[IpAddressCount], "counter"), "counter")
 
     println("updating...")
-    val list = List(
-      new IpAddress(1, 2, 3, 4),
-      new IpAddress(1, 2, 3, 4),
-      new IpAddress(1, 2, 3, 5),
-      new IpAddress(1, 2, 3, 6),
-      new IpAddress(1, 2, 13, 4),
-      new IpAddress(1, 2, 13, 4),
-      new IpAddress(11, 12, 13, 15)
-    )
 
-//    val list = 1.to(10).map(_ => IpAddress.random)
+//    val list = List(
+//      new IpAddress(1, 2, 3, 4),
+//      new IpAddress(1, 2, 3, 4),
+//      new IpAddress(1, 2, 3, 5),
+//      new IpAddress(1, 2, 3, 6),
+//      new IpAddress(1, 2, 13, 4),
+//      new IpAddress(1, 2, 13, 4),
+//      new IpAddress(11, 12, 13, 15)
+//    )
+
+    val list = 1.to(1000000).map(_ => IpAddress.random)
 
     list.foreach{ v =>
       //println(v)
@@ -92,8 +93,8 @@ object IpAddessMain {
 
     // at this point the other cascading is still happening, we've only for sure sent the top-level message
 
-    println("emitting...")
-    counter ! EmitCount(emitter)
+//    println("emitting...")
+//    counter ! EmitCount(emitter)
 
 
     // so it's likely the update messages *and* the emit messages are cascading simultaneously...
@@ -103,8 +104,9 @@ object IpAddessMain {
     // how do we wait until the messages to emitter have cascade through all the actors?
 //    Thread.sleep(2000)
 
+    println("building tree")
+
     implicit val timeout = Timeout(3 seconds)
-//    import system.dispatcher
 
     val r = Await.result(
       ask(counter, AskForCountTree),

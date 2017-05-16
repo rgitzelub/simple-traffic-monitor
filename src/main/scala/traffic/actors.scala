@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 case class CountTreeNode(label: String, count: Int, children: Iterable[CountTreeNode]) {
   def print(indent: Int): Unit = {
 //    println(children)
-    println(s"|${"  " * indent}${label}: ${count}")
+    println(s">${"  " * indent}${label}: ${count}")
     children.foreach(c => c.print(indent + 1))
   }
 }
@@ -71,14 +71,11 @@ abstract class NodeCount[T](val label: String) extends Actor with Counting with 
       implicit val timeout = Timeout(1 seconds)
       import context.dispatcher
 
-println(label + " node asked from " + sender.path.name)
-      val fs = context.children.map{ ask(_, AskForCountTree).mapTo[CountTreeNode] }
       val s = sender // http://stackoverflow.com/a/25402857
+
+      val fs = context.children.map{ ask(_, AskForCountTree).mapTo[CountTreeNode] }
       Future.sequence(fs).map{ counts =>
-//CountTreeNode(label, count, counts).print(0)
-        println(label + " sender now " + s.path.name)
         s ! CountTreeNode(label, count, counts)
-        println(label + " node responded with "+ counts)
       }
 
     case msg :EmitCount =>
@@ -93,10 +90,7 @@ abstract class LeafCount[T](val label: String) extends Actor with Counting {
       count += 1
 
     case AskForCountTree =>
-println(label + " asked")
       sender ! CountTreeNode(label, count, List())
-      CountTreeNode(label, count, List()).print(0)
-println(label + " responded with " + count)
 
     case EmitCount(emitter) =>
       emitter ! CountToEmit(label, count)
