@@ -109,11 +109,11 @@ object IpAddessMain {
     implicit val timeout = Timeout(3 seconds)
 
     val r = Await.result(
-      ask(counter, AskForCountTree),
+      ask(counter, AskForCountsTree),
       Duration(6, TimeUnit.SECONDS)
     )
 
-    r.asInstanceOf[CountTreeNode].print(0)
+    r.asInstanceOf[CountsTree].print(0)
 
     emitter ! Stop
   }

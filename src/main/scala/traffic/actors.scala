@@ -9,16 +9,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-case class CountTreeNode(label: String, count: Int, children: Iterable[CountTreeNode]) {
-  def print(indent: Int): Unit = {
-//    println(children)
-    println(s">${"  " * indent}${label}: ${count}")
-    children.foreach(c => c.print(indent + 1))
-  }
-}
-
-case object AskForCountTree
-
 
 trait Counting {
   this: Actor =>
@@ -61,26 +51,26 @@ trait ChildStrategy[T] {
 
 
 abstract class NodeCount[T](val label: String) extends Actor with Counting with ChildStrategy[T] {
+  // need these to be able to use Future in `receive`... which seems a bit klunky
+  // TODO: what set the timeout to?
+  implicit val timeout = Timeout(1 seconds)
+  import context.dispatcher
+
   def receive = {
     case UpdateCountFor(value: T) =>
       childFor(value) ! UpdateCountFor(value)
       count += 1
 
-    case AskForCountTree =>
-      // TODO: really need these?
-      implicit val timeout = Timeout(1 seconds)
-      import context.dispatcher
-
-      val s = sender // http://stackoverflow.com/a/25402857
-
-      val fs = context.children.map{ ask(_, AskForCountTree).mapTo[CountTreeNode] }
-      Future.sequence(fs).map{ counts =>
-        s ! CountTreeNode(label, count, counts)
-      }
-
     case msg :EmitCount =>
       context.children.foreach(_ ! msg)
       msg.emitter ! CountToEmit(label, count)
+
+    case AskForCountsTree =>
+      val copyOfSenderForFutureUse = sender // http://stackoverflow.com/a/25402857
+      val childFutures = context.children.map{ ask(_, AskForCountsTree).mapTo[CountsTree] }
+      Future.sequence(childFutures).map{ childTrees =>
+        copyOfSenderForFutureUse ! CountsTree(label, count, childTrees)
+      }
   }
 }
 
@@ -89,8 +79,8 @@ abstract class LeafCount[T](val label: String) extends Actor with Counting {
     case UpdateCountFor(_) =>
       count += 1
 
-    case AskForCountTree =>
-      sender ! CountTreeNode(label, count, List())
+    case AskForCountsTree =>
+      sender ! CountsTree(label, count, List())
 
     case EmitCount(emitter) =>
       emitter ! CountToEmit(label, count)
