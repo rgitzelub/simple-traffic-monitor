@@ -20,6 +20,9 @@ trait Counting {
 }
 
 
+/*
+ * breaking this out as a trait makes NodeCount less cluttered
+ */
 trait ChildStrategy[T] {
   this: Actor =>
 
@@ -33,6 +36,7 @@ trait ChildStrategy[T] {
   // a unique name for the actor itself, ideally based on the value
   def childActorName(value: T): String
 
+  // -------------
 
   // we can use anything for the name, and if we use the 'key' in the name uniquely,
   //  we don't need to explicitly keep a map of keys to actors (so long as we don't

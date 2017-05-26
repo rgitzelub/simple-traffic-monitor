@@ -1,6 +1,6 @@
 package traffic
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Terminated}
+import akka.actor.{ActorSystem, Props}
 
 import scala.util.Random
 
