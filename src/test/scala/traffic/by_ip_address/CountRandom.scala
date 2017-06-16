@@ -2,11 +2,11 @@ package traffic.by_ip_address
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
+import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
-import traffic.{AskForCountsTree, CountsTree, Emitter, LeafCount, NodeCount, Terminator, UpdateCountFor}
+import traffic.{AskForCountsTree, CountsTree, Emitter, UpdateCountFor}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, _}
@@ -20,32 +20,25 @@ object CountRandom {
 
   def main(args: Array[String]): Unit = {
 
+    val log = Logging.getLogger(system, this)
+
     val emitter = system.actorOf(Props[Emitter], "emitter")
-    system.actorOf(Props(classOf[Terminator], emitter), "terminator")
+   // system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
-    val counter = system.actorOf(Props(classOf[IpAddressCount], "counter"), "counter")
+    val counter = system.actorOf(Props(classOf[IpAddressCount], "Address Counter"), "counter")
 
-    println("updating...")
+    log.info("updating...")
 
-//    val list = List(
-//      new IpAddress(1, 2, 3, 4),
-//      new IpAddress(1, 2, 3, 4),
-//      new IpAddress(1, 2, 3, 5),
-//      new IpAddress(1, 2, 3, 6),
-//      new IpAddress(1, 2, 13, 4),
-//      new IpAddress(1, 2, 13, 4),
-//      new IpAddress(11, 12, 13, 15)
-//    )
+    val N = 3
 
-    val list = 1.to(1000000).map(_ => IpAddress.random)
-
-    list.foreach{ v =>
-      //println(v)
-      counter ! UpdateCountFor(v)
-    }
+    1.to(N)
+      .map(_ => IpAddress.random)
+      .foreach{ v =>
+        counter ! UpdateCountFor(v)
+      }
 
 
-    println("building tree")
+    log.info("building tree")
 
     implicit val timeout = Timeout(3 seconds)
 
@@ -56,6 +49,16 @@ object CountRandom {
 
     r.asInstanceOf[CountsTree].print(0)
 
-    emitter ! Stop
+    log.info("done printing")
+
+    system.stop(counter)
+    system.stop(emitter)
+
+//    emitter ! Stop
+//    println("stop sent")
+
+    system.terminate()
+
+//    Thread.sleep(1000)
   }
 }

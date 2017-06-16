@@ -15,12 +15,10 @@ object IpAddress {
   )
 
   def fromString(s: String): IpAddress = {
-    println(s"'$s'")
     s.split("\\.").toList match {
       case List(a, b, c, d) =>
         IpAddress(a.toInt, b.toInt, c.toInt, d.toInt)
       case x =>
-        println(x)
         throw new RuntimeException(s"invalid ip address '${s}'")
     }
   }

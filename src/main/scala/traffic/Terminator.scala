@@ -5,6 +5,7 @@ import akka.actor._
 
 
 class Terminator(ref: ActorRef) extends Actor with ActorLogging {
+
   context watch ref
 
   def receive = {
