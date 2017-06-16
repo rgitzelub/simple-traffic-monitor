@@ -8,11 +8,19 @@ case class IpAddress(a: Int, b: Int, c: Int, d: Int)
 
 object IpAddress {
   def random = IpAddress(
-    Random.nextInt(16) + 1,
-    Random.nextInt(16) + 1,
-    Random.nextInt(32) + 1,
-    Random.nextInt(4) + 1
+    Random.nextInt(256) + 1,
+    Random.nextInt(256) + 1,
+    Random.nextInt(256) + 1,
+    Random.nextInt(256) + 1
   )
+  // this gives us a much smaller problem space to test with
+  def randomSimplistic = IpAddress(
+    Random.nextInt(2) + 1,
+    Random.nextInt(2) + 1,
+    Random.nextInt(2) + 1,
+    Random.nextInt(2) + 1
+  )
+
 
   def fromString(s: String): IpAddress = {
     s.split("\\.").toList match {

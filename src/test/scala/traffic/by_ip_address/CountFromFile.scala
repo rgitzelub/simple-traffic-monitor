@@ -22,7 +22,7 @@ object CountFromFile {
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
-    val counter = system.actorOf(Props(classOf[IpAddressCount], "counter"), "counter")
+    val counter = system.actorOf(Props(classOf[IpAddressCountTree], "counter"), "counter")
 
     println("updating...")
 

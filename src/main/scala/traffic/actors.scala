@@ -23,7 +23,7 @@ trait Counting {
 /*
  * breaking this out as a trait makes NodeCount less cluttered
  */
-trait ChildStrategy[T] {
+trait ChildFactory[T] {
   this: Actor =>
 
   // what is under us?
@@ -42,28 +42,31 @@ trait ChildStrategy[T] {
   //  we don't need to explicitly keep a map of keys to actors (so long as we don't
   //  create any other children)
 
-  def newChild(value: T) = {
-    context.actorOf(Props(childClass, childNodeLabel(value)), childActorName(value))
+  def newChild(value: T, notifier: ActorRef) = {
+    context.actorOf(Props(childClass, childNodeLabel(value), notifier), childActorName(value))
   }
 
   // if we don't already have a child for the key, create one
-  def childFor(value: T): ActorRef = {
-    context.child(childActorName(value)).getOrElse(newChild(value))
+  def childFor(value: T, notifier: ActorRef): ActorRef = {
+    context.child(childActorName(value)).getOrElse(newChild(value, notifier))
   }
 }
 
 
 
-abstract class NodeCount[T](val label: String) extends Actor with Counting with ChildStrategy[T] {
+abstract class NodeCount[T](val label: String, val notifier: ActorRef) extends Actor with Counting with ChildFactory[T] {
   // need these to be able to use Future in `receive`... which seems a bit klunky
   // TODO: what set the timeout to?
   implicit val timeout = Timeout(1 seconds)
   import context.dispatcher
 
+  def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit
+
   def receive = {
     case UpdateCountFor(value: T) =>
-      childFor(value) ! UpdateCountFor(value)
+      childFor(value, notifier) ! UpdateCountFor(value)
       count += 1
+      notifyAndPossiblySend(count, notifier)
 
     case msg :EmitCount =>
       context.children.foreach(_ ! msg)
@@ -78,10 +81,14 @@ abstract class NodeCount[T](val label: String) extends Actor with Counting with 
   }
 }
 
-abstract class LeafCount[T](val label: String) extends Actor with Counting {
+abstract class LeafCount[T](val label: String, val notifier: ActorRef) extends Actor with Counting {
+
+  def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit
+
   def receive = {
     case UpdateCountFor(_) =>
       count += 1
+      notifyAndPossiblySend(count, notifier)
 
     case AskForCountsTree =>
       sender ! CountsTree(label, count, List())

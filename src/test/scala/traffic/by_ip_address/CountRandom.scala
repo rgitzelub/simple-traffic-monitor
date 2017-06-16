@@ -6,10 +6,10 @@ import akka.actor._
 import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
-import traffic.{AskForCountsTree, CountsTree, Emitter, UpdateCountFor}
+import traffic._
 
 import scala.concurrent.Await
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration._
 
 
 
@@ -25,16 +25,17 @@ object CountRandom {
     val emitter = system.actorOf(Props[Emitter], "emitter")
    // system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
-    val counter = system.actorOf(Props(classOf[IpAddressCount], "Address Counter"), "counter")
+    val notifier = system.actorOf(Props[Notifier], "notifier")
+
+    val counter = system.actorOf(Props(classOf[IpAddressCountTree], "Address Counter", notifier), "counter")
 
     log.info("updating...")
 
-    val N = 3
+    val N = 20
 
     1.to(N)
-      .map(_ => IpAddress.random)
-      .foreach{ v =>
-        counter ! UpdateCountFor(v)
+      .foreach{ _ =>
+        counter ! UpdateCountFor(IpAddress.randomSimplistic)
       }
 
 
