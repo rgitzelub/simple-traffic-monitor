@@ -1,54 +1,55 @@
 package traffic.by_ip_address
 
 import akka.actor.ActorRef
-import traffic.{LeafCount, NodeCount, Notifier, ThresholdReached}
+import traffic._
 
 
-class IpAddressCountTree(name: String, notifier: ActorRef) extends NodeCount[IpAddress](name, notifier) {
+class SimpleThresholdListener(notifier :ActorRef, aThreshold: Long, bThreshold: Long, cThreshold: Long, dThreshold: Long) extends CountListener {
+  override def notify(counter: Counting, count: Long) = {
+    counter match {
+      case a: ACountNode if (count == aThreshold) =>
+        notifier ! ThresholdReached(counter.label, count)
+
+      case b: BCountNode if (count == bThreshold) =>
+        notifier ! ThresholdReached(counter.label, count)
+
+      case c: CCountNode if (count == cThreshold) =>
+        notifier ! ThresholdReached(counter.label, count)
+
+      case d: DCountLeaf if (count == dThreshold) =>
+        notifier ! ThresholdReached(counter.label, count)
+
+      case _ =>
+        // do nothing
+    }
+  }
+}
+
+class IpAddressCountTree(name: String) extends NodeCount[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.x.x.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.a
   val childClass = classOf[ACountNode]
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef) = 
-    if(count == 100) {
-      notifier ! ThresholdReached(name, count)
-    }
 }
 
-class ACountNode(name: String, notifier: ActorRef) extends NodeCount[IpAddress](name, notifier) {
+class ACountNode(name: String) extends NodeCount[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.${value.b}.x.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.b
   val childClass = classOf[BCountNode]
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef) =
-    if(count == 10) {
-      notifier ! ThresholdReached(name, count)
-    }
 }
 
-class BCountNode(name: String, notifier: ActorRef) extends NodeCount[IpAddress](name, notifier) {
+class BCountNode(name: String) extends NodeCount[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.${value.b}.${value.c}.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.c
-  val childClass = classOf[CCount]
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef) =
-    if(count == 5) {
-      notifier ! ThresholdReached(name, count)
-    }
+  val childClass = classOf[CCountNode]
 }
 
-class CCount(name: String, notifier: ActorRef) extends NodeCount[IpAddress](name, notifier) {
+class CCountNode(name: String) extends NodeCount[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.${value.b}.${value.c}.${value.d}"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.d
   val childClass = classOf[DCountLeaf]
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef) =
-    if(count == 4) {
-      notifier ! ThresholdReached(name, count)
-    }
 }
 
-class DCountLeaf(name: String, notifier: ActorRef) extends LeafCount[IpAddress](name, notifier) {
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef) =
-    if(count == 2) {
-      notifier ! ThresholdReached(name, count)
-    }
+class DCountLeaf(name: String) extends LeafCount[IpAddress](name) {
 }
 
 

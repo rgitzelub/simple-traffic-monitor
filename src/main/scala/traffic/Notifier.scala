@@ -3,7 +3,7 @@ package traffic
 import akka.actor.{Actor, ActorLogging}
 
 
-case class ThresholdReached(name: String, count: Int)
+case class ThresholdReached(name: String, count: Long)
 
 
 class Notifier extends Actor with ActorLogging {

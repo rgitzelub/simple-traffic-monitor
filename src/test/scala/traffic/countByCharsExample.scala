@@ -5,31 +5,27 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import scala.util.Random
 
 
-class ThirdLastCharNodeCount(name: String, notifier: ActorRef) extends NodeCount[String](name, notifier) {
+class ThirdLastCharNodeCount(name: String) extends NodeCount[String](name) {
   def childNodeLabel(value: String) = "" + value.charAt(value.length-3)
   def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-3)
   def childClass = classOf[SecondLastCharNodeCount]
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit = ???
 }
 
 
-class SecondLastCharNodeCount(name: String, notifier: ActorRef) extends NodeCount[String](name, notifier) {
+class SecondLastCharNodeCount(name: String) extends NodeCount[String](name) {
   def childNodeLabel(value: String) = "" + value.charAt(value.length-2)
   def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-2)
   def childClass = classOf[LastCharNodeCount]
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit = ???
 }
 
 
-class LastCharNodeCount(name: String, notifier: ActorRef) extends NodeCount[String](name, notifier) {
+class LastCharNodeCount(name: String) extends NodeCount[String](name) {
   def childNodeLabel(value: String) = "" + value.charAt(value.length-1)
   def childActorName(value: String) = name + "-" + "leaf" + value.last.toString
   def childClass = classOf[MyLeafCount]
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit = ???
 }
 
-class MyLeafCount(name: String, notifier: ActorRef) extends LeafCount[String](name, notifier) {
-  override def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit = ???
+class MyLeafCount(name: String) extends LeafCount[String](name) {
 }
 
 

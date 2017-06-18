@@ -3,12 +3,12 @@ package traffic
 import akka.actor.{Actor, ActorLogging}
 
 
-case class CountToEmit(name: String, value: Int)
+case class CountToEmit(name: String, value: Long)
 
 
 class Emitter extends Actor with ActorLogging {
-  var countMessagesProcessed = 0
-  var countSum = 0
+  var countMessagesProcessed: Long = 0L
+  var countSum: Long = 0L
 
   def receive = {
     case CountToEmit(name, value) =>

@@ -1,5 +1,20 @@
 
-*June 16, 2017*
+##### June 18 2017
+
+Much simpler and cleaner to pass the "notifier" in via a message, rather than using constructors.
+
+But... doesn't work.  Or... oh. Simply sending the "set" message after the counter is initially built only adds it at the top level.  Not too children.
+
+So will need to endure the current notifier is added in when the children are created. Which means... sending a message to each after it's created. Or putting the constructor arg back in?  Hmm.
+
+...
+
+Okay, not SO hard... just needed to connect the `ChildFactory` and `Counting` traits via a callback. Not ideal, I'd like to ultimately separate the *tree-ness* but... good for now.
+
+Also, now it seems so long as I call `system.terminate` at the end of the program, the app stops. Hmmm.
+
+
+##### June 16, 2017
 
 Seems it's easy to forget what I've done if I put this down for awhile.
 

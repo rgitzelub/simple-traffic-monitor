@@ -13,8 +13,17 @@ object IpAddress {
     Random.nextInt(256) + 1,
     Random.nextInt(256) + 1
   )
-  // this gives us a much smaller problem space to test with
-  def randomSimplistic = IpAddress(
+
+  // these give us a much smaller problem spaces to test with
+  def random4 = IpAddress(
+    Random.nextInt(4) + 1,
+    Random.nextInt(4) + 1,
+    Random.nextInt(4) + 1,
+    Random.nextInt(4) + 1
+  )
+
+  // these give us a much smaller problem spaces to test with
+  def random2 = IpAddress(
     Random.nextInt(2) + 1,
     Random.nextInt(2) + 1,
     Random.nextInt(2) + 1,

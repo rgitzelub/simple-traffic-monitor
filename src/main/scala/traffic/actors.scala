@@ -13,12 +13,31 @@ import scala.concurrent.duration._
 trait Counting {
   this: Actor =>
 
-  var count = 0
+  var countListener: Option[CountListener] = None
+
+  var count: Long = 0
+
+  def increment() = {
+    count += 1
+
+    countListener.foreach{ cl =>
+//      println(label, count)
+      cl.notify(this, count)
+    }
+  }
+
+  def setListener(cl: CountListener) = {
+    countListener = Some(cl)
+  }
 
   // a human name for what the actor is counting
   def label: String
 }
 
+
+trait CountListener {
+  def notify(counter: Counting, count: Long)
+}
 
 /*
  * breaking this out as a trait makes NodeCount less cluttered
@@ -36,37 +55,45 @@ trait ChildFactory[T] {
   // a unique name for the actor itself, ideally based on the value
   def childActorName(value: T): String
 
+  def childCreatedHook(child: ActorRef) = {}
+
   // -------------
 
   // we can use anything for the name, and if we use the 'key' in the name uniquely,
   //  we don't need to explicitly keep a map of keys to actors (so long as we don't
   //  create any other children)
 
-  def newChild(value: T, notifier: ActorRef) = {
-    context.actorOf(Props(childClass, childNodeLabel(value), notifier), childActorName(value))
+  def newChild(value: T) = {
+    val child = context.actorOf(Props(childClass, childNodeLabel(value)), childActorName(value))
+    childCreatedHook(child)
+    child
   }
 
   // if we don't already have a child for the key, create one
-  def childFor(value: T, notifier: ActorRef): ActorRef = {
-    context.child(childActorName(value)).getOrElse(newChild(value, notifier))
+  def childFor(value: T): ActorRef = {
+    context.child(childActorName(value)).getOrElse(newChild(value))
   }
 }
 
 
 
-abstract class NodeCount[T](val label: String, val notifier: ActorRef) extends Actor with Counting with ChildFactory[T] {
+abstract class NodeCount[T](val label: String) extends Actor with Counting with ChildFactory[T] {
   // need these to be able to use Future in `receive`... which seems a bit klunky
   // TODO: what set the timeout to?
   implicit val timeout = Timeout(1 seconds)
   import context.dispatcher
 
-  def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit
+  override def childCreatedHook(child: ActorRef) = {
+    this.countListener.foreach(cl => child ! SetListener(cl))
+  }
 
   def receive = {
+    case SetListener(cl) =>
+      setListener(cl)
+      
     case UpdateCountFor(value: T) =>
-      childFor(value, notifier) ! UpdateCountFor(value)
-      count += 1
-      notifyAndPossiblySend(count, notifier)
+      childFor(value) ! UpdateCountFor(value)
+      increment()
 
     case msg :EmitCount =>
       context.children.foreach(_ ! msg)
@@ -81,14 +108,14 @@ abstract class NodeCount[T](val label: String, val notifier: ActorRef) extends A
   }
 }
 
-abstract class LeafCount[T](val label: String, val notifier: ActorRef) extends Actor with Counting {
-
-  def notifyAndPossiblySend(count: Int, notifier: ActorRef): Unit
+abstract class LeafCount[T](val label: String) extends Actor with Counting {
 
   def receive = {
+    case SetListener(cl) =>
+      setListener(cl)
+
     case UpdateCountFor(_) =>
-      count += 1
-      notifyAndPossiblySend(count, notifier)
+      increment()
 
     case AskForCountsTree =>
       sender ! CountsTree(label, count, List())

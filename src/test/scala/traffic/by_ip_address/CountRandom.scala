@@ -18,24 +18,26 @@ object CountRandom {
 
   val system = ActorSystem("ip")
 
+  val log = Logging.getLogger(system, this)
+
   def main(args: Array[String]): Unit = {
-
-    val log = Logging.getLogger(system, this)
-
-    val emitter = system.actorOf(Props[Emitter], "emitter")
-   // system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
     val notifier = system.actorOf(Props[Notifier], "notifier")
 
-    val counter = system.actorOf(Props(classOf[IpAddressCountTree], "Address Counter", notifier), "counter")
+    val counter = system.actorOf(Props(classOf[IpAddressCountTree], "Address Counter"), "counter")
+    counter ! SetListener(new SimpleThresholdListener(notifier, 10, 4, 3, 2))
 
     log.info("updating...")
 
-    val N = 20
+    val N = 100
+    val printAt = N / 10
+    val delayMs = 100
 
     1.to(N)
-      .foreach{ _ =>
-        counter ! UpdateCountFor(IpAddress.randomSimplistic)
+      .foreach{ i =>
+        counter ! UpdateCountFor(IpAddress.random4)
+        if(i % printAt == 0) log.info(s"$i sent")
+        Thread.sleep(delayMs)
       }
 
 
@@ -52,14 +54,9 @@ object CountRandom {
 
     log.info("done printing")
 
-    system.stop(counter)
-    system.stop(emitter)
-
-//    emitter ! Stop
-//    println("stop sent")
+//    system.stop(counter)
+//    system.stop(emitter)
 
     system.terminate()
-
-//    Thread.sleep(1000)
   }
 }
