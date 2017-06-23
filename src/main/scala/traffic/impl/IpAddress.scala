@@ -6,6 +6,7 @@ import scala.util.Random
 
 case class IpAddress(a: Int, b: Int, c: Int, d: Int)
 
+
 object IpAddress {
   def random = IpAddress(
     Random.nextInt(256) + 1,
@@ -29,7 +30,6 @@ object IpAddress {
     Random.nextInt(2) + 1,
     Random.nextInt(2) + 1
   )
-
 
   def fromString(s: String): IpAddress = {
     s.split("\\.").toList match {

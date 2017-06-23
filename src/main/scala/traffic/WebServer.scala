@@ -16,7 +16,16 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.io.StdIn
 
+case class HitParams(address: String)
+
+// based on http://doc.akka.io/docs/akka-http/10.0.6/scala/http/routing-dsl/overview.html
+
 object WebServer {
+
+  def toHtml(countsTree: CountsTree, indent: Int): String = {
+    s"${"&nbsp;&nbsp;" * indent}${countsTree.label}: ${countsTree.count}</br>\n" +
+      countsTree.children.map(toHtml(_, indent+1)).mkString("")
+  }
 
   def main(args: Array[String]) {
     implicit val system = ActorSystem()
@@ -33,14 +42,16 @@ object WebServer {
       get {
         pathSingleSlash {
           onSuccess(ask(counter, AskForCountsTree).mapTo[CountsTree]){ tree =>
-            val results = tree.toHtml(0)
+            val results = toHtml(tree, 0)
             println(results)
             complete(HttpEntity(ContentTypes.`text/html(UTF-8)`,"<html><body>" + results + "</body></html>"))
           }
         } ~
-        path("ping") {
-          counter ! UpdateCountFor(IpAddress(1,2,3,4))
-          complete("PONG!")
+        path("hit") {
+          parameters(('address)).as(HitParams) { params =>
+            counter ! UpdateCountFor(IpAddress.fromString(params.address))
+            complete("PONG!")
+          }
         } ~
         path("crash") {
           sys.error("BOOM!")
