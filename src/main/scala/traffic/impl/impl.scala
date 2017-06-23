@@ -1,4 +1,4 @@
-package traffic.by_ip_address
+package traffic.impl
 
 import akka.actor.ActorRef
 import traffic._

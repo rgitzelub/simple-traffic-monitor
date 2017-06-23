@@ -7,6 +7,7 @@ import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
 import traffic._
+import traffic.impl.{IpAddress, IpAddressCountTree, SimpleThresholdListener}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

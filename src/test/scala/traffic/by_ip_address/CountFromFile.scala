@@ -7,6 +7,7 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
+import traffic.impl.{IpAddress, IpAddressCountTree}
 import traffic.{AskForCountsTree, CountsTree, Emitter, Terminator, UpdateCountFor}
 
 import scala.concurrent.Await

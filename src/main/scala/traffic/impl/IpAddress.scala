@@ -1,4 +1,4 @@
-package traffic.by_ip_address
+package traffic.impl
 
 import scala.util.Random
 
