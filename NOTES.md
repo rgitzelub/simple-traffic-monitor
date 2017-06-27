@@ -1,4 +1,37 @@
 
+##### June 26 2017
+
+Thinking about how to start taking time into account, i.e say we just want numbers for the last hour, or day?
+
+Map? Hmmm, google... turns out Guava has something interesting: https://google.github.io/guava/releases/17.0/api/docs/com/google/common/cache/CacheBuilder.html
+
+Cool. But... overkill? And do I really need a map? Really... just a list... of timestamp.
+
+Heck, not even, just longs!  Much easier to compare.
+
+So do some coding, not hard to break out a "counting strategy" trait to manage that. Well, okay, first just changed it, then realized I'd want to be able to switch it out, to compare.
+
+So made a strategy, got that going. `takeWhile` will hack off the tail. Okay.
+
+But... first I did when incrementing.  Ooops, it will never time out.
+
+So make it chop the tail on read.
+
+Okay, that worked, but... now got a lot of zero counts. Don't want zero counts, we want the actor to go away when the count clears (it's no longer relevant).
+
+Well... what, do the read of the count, and kill the actor then, still returning 0?  That doesn't make sense.
+
+So... better to just do it ad hoc. Send a command to the actor, then there are no contention issues. And it reduces the counting actors' responsibilities.
+
+And that *seems* to work... geez, I really need to start unit-testing.
+
+But... it's also killing the top node, oops! Guess it needs to extend not the same thing.
+ 
+Anyway.
+
+(BTW, did this all during first day of CTAConf)
+
+
 ##### June 18 2017
 
 Much simpler and cleaner to pass the "notifier" in via a message, rather than using constructors.

@@ -5,7 +5,7 @@ import traffic._
 
 
 class SimpleThresholdListener(notifier :ActorRef, aThreshold: Long, bThreshold: Long, cThreshold: Long, dThreshold: Long) extends CountListener {
-  override def notify(counter: Counting, count: Long) = {
+  override def notify(counter: Counter, count: Long) = {
     counter match {
       case a: ACountNode if (count == aThreshold) =>
         notifier ! ThresholdReached(counter.label, count)

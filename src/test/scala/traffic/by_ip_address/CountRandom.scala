@@ -58,6 +58,17 @@ object CountRandom {
 //    system.stop(counter)
 //    system.stop(emitter)
 
+//    Thread.sleep(1500)
+    counter ! ForgetOldCounts(1)
+    Thread.sleep(500)
+
+    val r2 = Await.result(
+      ask(counter, AskForCountsTree),
+      Duration(6, TimeUnit.SECONDS)
+    )
+
+    r2.asInstanceOf[CountsTree].print(0)
+
     system.terminate()
   }
 }

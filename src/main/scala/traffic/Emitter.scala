@@ -12,7 +12,7 @@ class Emitter extends Actor with ActorLogging {
 
   def receive = {
     case CountToEmit(name, value) =>
-      log.info(s"${name}: ${value}")
+      log.debug(s"${name}: ${value}")
       countMessagesProcessed += 1
       countSum += value
 

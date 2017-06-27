@@ -5,6 +5,7 @@ import akka.actor.ActorRef
 
 case class UpdateCountFor[T](value: T)
 
+case class ForgetOldCounts(seconds: Int)
 
 case class EmitCount(emitter: ActorRef)
 
