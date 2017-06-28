@@ -64,7 +64,7 @@ abstract class NodeCount[T](val label: String) extends Actor with Counter with S
       childFor(value) ! UpdateCountFor(value)
       increment()
 
-    case msg :EmitCount =>
+    case msg: EmitCount =>
       context.children.foreach(_ ! msg)
       msg.emitter ! CountToEmit(label, count)
 

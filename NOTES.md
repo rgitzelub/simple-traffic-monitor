@@ -1,4 +1,46 @@
 
+##### June 27 2017
+
+So I've got a problem, I realized last night: when a node goes to zero and stops, it is still referenced in the parent's map.
+So subsequent counts will fail on a dead reference.  
+
+So (I use 'so' too much) the child should send a message to the parent saying it's zero and should be closed down. Easy enough.
+The parent is responsible for starting, it should be responsible for stopping.
+
+But... what if an increment comes in between the reset and the 'shut me down'?  That increment will be lost.
+
+Hmmm.
+
+Poke around a bit, but don't find anything. And it still feels wrong. 
+
+The problem is the responsibility for deciding when to start or stop is split across the two actors. Perhaps the parent should make all the choices? But that means that parent needs to know the count, so it know when to shut a child down. Which would fix the race condition.
+
+Now, we can't just ask the child each time what its count is, that's asynchronous. 
+
+It starts feeling heavy though, the parent has a link to a child, *and* has its counts... 
+I guess you just think of it parenting more parents. Hmmmm.
+
+I like this puzzling things out. Though perhaps wouldn't appreciate doing it under pressure.
+
+...
+
+BUT! If we do that, then each parent has to do all the work of counting, and of forgeting... 
+and if each stage keeps its own aggregate count, then... the top node is working for EVERY SINGLE VALUE.
+
+Ug. That doesn't scale at all.
+
+Maybe... maybe only the *leaves* should be counting, the rest should aggregate as needed? 
+(Do we really need to alarm on the interim values?) 
+
+Then the work of filtering out old data only happens at the leaves (good).
+
+And then... maybe we don't *need* to immeditately delete zero leaves. Just ignore them? 
+And periodically garbage-collect them? Recursively?  Hmm, could still get in a race condition
+ for higher-level nodes.
+ 
+ 
+
+
 ##### June 26 2017
 
 Thinking about how to start taking time into account, i.e say we just want numbers for the last hour, or day?
