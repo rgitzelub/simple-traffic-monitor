@@ -7,7 +7,7 @@ import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
 import traffic._
-import traffic.impl.{IpAddress, IpAddressCountTree, SimpleThresholdListener}
+import traffic.impl.{IpAddress, IpAddressTreeCounter, SimpleThresholdListener}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -25,14 +25,17 @@ object CountRandom {
 
     val notifier = system.actorOf(Props[Notifier], "notifier")
 
-    val counter = system.actorOf(Props(classOf[IpAddressCountTree], "Address Counter"), "counter")
+    val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "Address Counter"), "counter")
     counter ! SetListener(new SimpleThresholdListener(notifier, 10, 4, 3, 2))
 
-    log.info("updating...")
+    log.info("counting...")
 
-    val N = 100
+    val N = 1000
+    val totalTime = 2000 // milliseconds
+
     val printAt = N / 10
-    val delayMs = 100
+
+    val delayMs = totalTime / N
 
     1.to(N)
       .foreach{ i =>
@@ -42,32 +45,31 @@ object CountRandom {
       }
 
 
-    log.info("building tree")
+    log.info("done counting")
 
     implicit val timeout = Timeout(3 seconds)
 
-    val r = Await.result(
-      ask(counter, AskForCountsTree),
-      Duration(6, TimeUnit.SECONDS)
-    )
+    def printCurrentTree = {
+      log.info("====================")
+      val t = Await.result(
+        ask(counter, AskForCountsTree),
+        Duration(6, TimeUnit.SECONDS)
+      ).asInstanceOf[CountsTree]
 
-    r.asInstanceOf[CountsTree].print(0)
+      log.info(t.count.toString)
+      t.print(0){ x => log.info(x.toString) }
+    }
+    printCurrentTree
 
-    log.info("done printing")
-
-//    system.stop(counter)
-//    system.stop(emitter)
-
-//    Thread.sleep(1500)
+    Thread.sleep(100)
     counter ! ForgetOldCounts(1)
+
+    printCurrentTree
+
     Thread.sleep(500)
+    counter ! ForgetOldCounts(1)
 
-    val r2 = Await.result(
-      ask(counter, AskForCountsTree),
-      Duration(6, TimeUnit.SECONDS)
-    )
-
-    r2.asInstanceOf[CountsTree].print(0)
+    printCurrentTree
 
     system.terminate()
   }

@@ -1,4 +1,20 @@
 
+##### June 30 2017 - Pro-D!
+
+Thinking about it the past few days...
+
+* definitely want to NOT have any actor keeping more than one count, that would cause a lot of congestion
+* there are various ways I've thought of to manage obsolete counts
+  * send a message back to parent saying you're zero, parent can put you in a different map
+  * if you've been in that map for awhile, delete you
+  * or... stuff like that... there always seems to be an edge race condition
+  * but it's possible
+* but it's not necessary!!  For now, just don't include 0 counts in the output, ignore them
+  * in the future if it seems we really need to free them up, worry about them then
+* while we're doing the tree count, also count the number of actors, and the number of zero leaves
+  * so we know number of actors, and number of active addresses
+  
+
 ##### June 27 2017
 
 So I've got a problem, I realized last night: when a node goes to zero and stops, it is still referenced in the parent's map.

@@ -8,7 +8,7 @@ import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model._
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
-import traffic.impl.{IpAddress, IpAddressCountTree, SimpleThresholdListener}
+import traffic.impl.{IpAddress, IpAddressTreeCounter, SimpleThresholdListener}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.util.Timeout
@@ -35,7 +35,7 @@ object WebServer {
 
     implicit val timeout = Timeout(3 seconds)
     val notifier = system.actorOf(Props[Notifier], "notifier")
-    val counter = system.actorOf(Props(classOf[IpAddressCountTree], "Address Counter"), "counter")
+    val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "Address Counter"), "counter")
     counter ! SetListener(new SimpleThresholdListener(notifier, 10, 4, 3, 2))
 
     val route =

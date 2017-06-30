@@ -57,9 +57,8 @@ trait Counter {
     countListener = cl
   }
 
-  def increment() = {
+  def increment = {
     incrementCount
-
     countListener.foreach{ cl =>
       //      println(label, count)
       cl.notify(this, count)

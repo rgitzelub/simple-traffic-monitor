@@ -8,6 +8,8 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+
+
 /*
  * breaking this out as a trait makes NodeCount less cluttered
  */
@@ -46,62 +48,59 @@ trait ChildFactory[T] {
 
 
 
-abstract class NodeCount[T](val label: String) extends Actor with Counter with SimpleListCountingStrategy with ChildFactory[T] {
+abstract class CounterNode[T](val label: String) extends Actor with ChildFactory[T] {
   // need these to be able to use Future in `receive`... which seems a bit klunky
   // TODO: what set the timeout to?
   implicit val timeout = Timeout(1 seconds)
   import context.dispatcher
 
+  // TODO: need to rethink this part
   override def childCreatedHook(child: ActorRef) = {
-    countListener.map{ cl => child ! SetListener(cl) }
+//    countListener.map{ cl => child ! SetListener(cl) }
   }
 
   def receive = {
-    case SetListener(cl) =>
-      setListener(Some(cl))
-
     case UpdateCountFor(value: T) =>
       childFor(value) ! UpdateCountFor(value)
-      increment()
-
-    case msg: EmitCount =>
-      context.children.foreach(_ ! msg)
-      msg.emitter ! CountToEmit(label, count)
 
     case AskForCountsTree =>
-      val copyOfSenderForFutureUse = sender // http://stackoverflow.com/a/25402857
-      val childFutures = context.children.map{ ask(_, AskForCountsTree).mapTo[CountsTree] }
+      val childFutures = context.children.map{
+        ask(_, AskForCountsTree).mapTo[CountsTree]
+      }
+      val copyOfSenderToUseFromTheFuture = sender // http://stackoverflow.com/a/25402857
       Future.sequence(childFutures).map{ childTrees =>
-        copyOfSenderForFutureUse ! CountsTree(label, count, childTrees)
+        val combinedCount = Count.sum(childTrees.map(_.count))
+        copyOfSenderToUseFromTheFuture ! CountsTree(label, combinedCount, childTrees)
       }
 
-    case msg: ForgetOldCounts =>
-      context.children.foreach(_ ! msg)
-      forgetOlderThan(msg.seconds)
-      if(count == 0)
-        // TODO: we don't want to do this for the top-level node!!!!!!
-        context.stop(self)
+    // the rest of these are just passed along
+    case emit: EmitCount =>
+      context.children.foreach(_ ! emit)
+
+    case set: SetListener =>
+      context.children.foreach(_ ! set)
+
+    case forget: ForgetOldCounts =>
+      context.children.foreach(_ ! forget)
   }
 }
 
-abstract class LeafCount[T](val label: String) extends Actor with Counter with SimpleListCountingStrategy {
+abstract class CounterLeaf[T](val label: String) extends Actor with Counter with SimpleListCountingStrategy {
 
   def receive = {
     case SetListener(cl) =>
       setListener(Some(cl))
 
     case UpdateCountFor(_) =>
-      increment()
+      increment
 
     case AskForCountsTree =>
-      sender ! CountsTree(label, count, List())
+      sender ! CountsTree(label, Count(count, 1, if(count == 0) 1 else 0), List())
 
     case EmitCount(emitter) =>
       emitter ! CountToEmit(label, count)
 
     case msg: ForgetOldCounts =>
       forgetOlderThan(msg.seconds)
-      if(count == 0)
-        context.stop(self)
   }
 }

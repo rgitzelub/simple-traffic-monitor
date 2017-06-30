@@ -5,27 +5,27 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import scala.util.Random
 
 
-class ThirdLastCharNodeCount(name: String) extends NodeCount[String](name) {
+class ThirdLastCharCounterNode(name: String) extends CounterNode[String](name) {
   def childNodeLabel(value: String) = "" + value.charAt(value.length-3)
   def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-3)
-  def childClass = classOf[SecondLastCharNodeCount]
+  def childClass = classOf[SecondLastCharCounterNode]
 }
 
 
-class SecondLastCharNodeCount(name: String) extends NodeCount[String](name) {
+class SecondLastCharCounterNode(name: String) extends CounterNode[String](name) {
   def childNodeLabel(value: String) = "" + value.charAt(value.length-2)
   def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-2)
-  def childClass = classOf[LastCharNodeCount]
+  def childClass = classOf[LastCharCounterNode]
 }
 
 
-class LastCharNodeCount(name: String) extends NodeCount[String](name) {
+class LastCharCounterNode(name: String) extends CounterNode[String](name) {
   def childNodeLabel(value: String) = "" + value.charAt(value.length-1)
   def childActorName(value: String) = name + "-" + "leaf" + value.last.toString
-  def childClass = classOf[MyLeafCount]
+  def childClass = classOf[MyCounterLeaf]
 }
 
-class MyLeafCount(name: String) extends LeafCount[String](name) {
+class MyCounterLeaf(name: String) extends CounterLeaf[String](name) {
 }
 
 
@@ -41,7 +41,7 @@ object TrafficMain {
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
-    val counter = system.actorOf(Props(classOf[ThirdLastCharNodeCount], "counter"), "counter")
+    val counter = system.actorOf(Props(classOf[ThirdLastCharCounterNode], "counter"), "counter")
 
     println("updating...")
     val list = 1.to(1000).map { _ => Random.nextInt(1000) + 1000 }

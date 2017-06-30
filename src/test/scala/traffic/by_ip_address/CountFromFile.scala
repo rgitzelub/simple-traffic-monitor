@@ -7,7 +7,7 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
-import traffic.impl.{IpAddress, IpAddressCountTree}
+import traffic.impl.{IpAddress, IpAddressTreeCounter}
 import traffic.{AskForCountsTree, CountsTree, Emitter, Terminator, UpdateCountFor}
 
 import scala.concurrent.Await
@@ -23,7 +23,7 @@ object CountFromFile {
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
-    val counter = system.actorOf(Props(classOf[IpAddressCountTree], "counter"), "counter")
+    val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "counter"), "counter")
 
     println("updating...")
 
@@ -44,7 +44,7 @@ object CountFromFile {
       Duration(6, TimeUnit.SECONDS)
     )
 
-    r.asInstanceOf[CountsTree].print(0)
+    r.asInstanceOf[CountsTree].print(0)(println)
 
     emitter ! Stop
   }
