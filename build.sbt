@@ -11,6 +11,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % "10.0.8",
 
   "com.typesafe.akka" %% "akka-actor" % "2.4.19",
-  "com.typesafe.akka" %% "akka-slf4j" % "2.4.19"
+  "com.typesafe.akka" %% "akka-slf4j" % "2.4.19",
+
+  "joda-time" % "joda-time" % "2.9.9"
 )
 

@@ -7,16 +7,16 @@ import traffic._
 class SimpleThresholdListener(notifier :ActorRef, aThreshold: Long, bThreshold: Long, cThreshold: Long, dThreshold: Long) extends CountListener {
   override def notify(counter: Counter, count: Long) = {
     counter match {
-      case a: ACounterNode if (count == aThreshold) =>
+      case a: ACounterTreeNode if (count == aThreshold) =>
         notifier ! ThresholdReached(counter.label, count)
 
-      case b: BCounterNode if (count == bThreshold) =>
+      case b: BCounterTreeNode if (count == bThreshold) =>
         notifier ! ThresholdReached(counter.label, count)
 
-      case c: CCounterNode if (count == cThreshold) =>
+      case c: CCounterTreeNode if (count == cThreshold) =>
         notifier ! ThresholdReached(counter.label, count)
 
-      case d: DCounterLeaf if (count == dThreshold) =>
+      case d: DCounterTreeLeaf if (count == dThreshold) =>
         notifier ! ThresholdReached(counter.label, count)
 
       case _ =>
@@ -25,31 +25,31 @@ class SimpleThresholdListener(notifier :ActorRef, aThreshold: Long, bThreshold: 
   }
 }
 
-class IpAddressTreeCounter(name: String) extends CounterNode[IpAddress](name) {
+class IpAddressTreeCounter(name: String) extends CounterTreeNode[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.x.x.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.a
-  val childClass = classOf[ACounterNode]
+  val childClass = classOf[ACounterTreeNode]
 }
 
-class ACounterNode(name: String) extends CounterNode[IpAddress](name) {
+class ACounterTreeNode(name: String) extends CounterTreeNode[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.${value.b}.x.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.b
-  val childClass = classOf[BCounterNode]
+  val childClass = classOf[BCounterTreeNode]
 }
 
-class BCounterNode(name: String) extends CounterNode[IpAddress](name) {
+class BCounterTreeNode(name: String) extends CounterTreeNode[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.${value.b}.${value.c}.x"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.c
-  val childClass = classOf[CCounterNode]
+  val childClass = classOf[CCounterTreeNode]
 }
 
-class CCounterNode(name: String) extends CounterNode[IpAddress](name) {
+class CCounterTreeNode(name: String) extends CounterTreeNode[IpAddress](name) {
   def childNodeLabel(value: IpAddress) = s"${value.a}.${value.b}.${value.c}.${value.d}"
   def childActorName(value: IpAddress) = context.self.path.name + "-" + value.d
-  val childClass = classOf[DCounterLeaf]
+  val childClass = classOf[DCounterTreeLeaf]
 }
 
-class DCounterLeaf(name: String) extends CounterLeaf[IpAddress](name) {
+class DCounterTreeLeaf(name: String) extends CounterTreeLeaf[IpAddress](name) {
 }
 
 

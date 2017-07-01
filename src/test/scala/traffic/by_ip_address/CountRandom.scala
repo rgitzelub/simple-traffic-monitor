@@ -30,45 +30,45 @@ object CountRandom {
 
     log.info("counting...")
 
+    // we want to submit `N` addresses over `totalTime` ms
     val N = 1000
     val totalTime = 2000 // milliseconds
 
-    val printAt = N / 10
-
+    val updateProgressEvery = N / 10
     val delayMs = totalTime / N
 
     1.to(N)
       .foreach{ i =>
         counter ! UpdateCountFor(IpAddress.random4)
-        if(i % printAt == 0) log.info(s"$i sent")
+        if(i % updateProgressEvery == 0) log.info(s"$i addresses submitted")
         Thread.sleep(delayMs)
       }
 
 
     log.info("done counting")
 
-    implicit val timeout = Timeout(3 seconds)
+    implicit val timeout = Timeout(1 seconds)
+    val askTimeout = Duration(1, TimeUnit.SECONDS)
 
     def printCurrentTree = {
       log.info("====================")
-      val t = Await.result(
-        ask(counter, AskForCountsTree),
-        Duration(6, TimeUnit.SECONDS)
-      ).asInstanceOf[CountsTree]
-
-      log.info(t.count.toString)
-      t.print(0){ x => log.info(x.toString) }
+      val finalCount = Await.result(ask(counter, CounterTree.AskForCounts), askTimeout).asInstanceOf[CountsTree]
+      log.info(finalCount.count.toString)
+      finalCount.print(0){ x => log.info(x.toString) }
     }
+
     printCurrentTree
 
     Thread.sleep(100)
     counter ! ForgetOldCounts(1)
-
     printCurrentTree
 
     Thread.sleep(500)
     counter ! ForgetOldCounts(1)
+    printCurrentTree
 
+    Thread.sleep(800)
+    counter ! ForgetOldCounts(1)
     printCurrentTree
 
     system.terminate()

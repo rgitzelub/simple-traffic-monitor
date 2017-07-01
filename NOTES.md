@@ -14,6 +14,31 @@ Thinking about it the past few days...
 * while we're doing the tree count, also count the number of actors, and the number of zero leaves
   * so we know number of actors, and number of active addresses
   
+...
+
+Okay, counts are only in leaves, now. Did a bunch of renaming. I get a count of the actors.
+
+So what about real data?  Tried pulling from Sumo, but turns out it exports at most 100K lines, bah!
+
+What about the ELB logs in S3?  Aha!  Download a day's worth, takes awhile.  Eventually figure out the pipe 
+
+     cat t | cut -b1-100 | cut -d' ' -f1,3 | sed -e 's/:[[:digit:]]*$//g'
+     
+I tried reading and... it timed out processing 5M... raise the timeout to five minutes, still not good.  Hmm.
+
+Take it down to 1M, fast. 2M a dozen messages to dead letter, and hangs.  Finally get it to 1.5M.  Not 1.6M. Weird.
+Though that's default memory settings.  Regardless, pulling out the counts takes only milliseconds for 1.5M records, so 
+I'm on to *something*
+
+    17:21:24.691 [ip-akka.actor.default-dispatcher-4] INFO traffic.by_ip_address.CountFromFile$ - reading...
+    17:21:42.942 [ip-akka.actor.default-dispatcher-2] INFO traffic.by_ip_address.CountFromFile$ - extracting counts
+    17:21:43.859 [ip-akka.actor.default-dispatcher-6] INFO traffic.by_ip_address.CountFromFile$ - 1500000 249041 0
+
+Well, okay, almost a second.  There are ways to optimize that (cache the length of the list, for instance).
+
+Interesting that when it hangs up, there are always exactly 10 undelivered messages.
+
+
 
 ##### June 27 2017
 
