@@ -1,4 +1,39 @@
 
+##### July 16
+
+Hmmm. Add some exception logging... log to a file... the Future is definitely timing out.
+
+    2017-07-16 22:32:56.820UTC INFO [ip-akka.actor.default-dispatcher-20] t.i.DCounterTreeLeaf - asked: 312027 216.228.72.46 - 1
+    2017-07-16 22:32:56.823UTC INFO [ip-akka.actor.default-dispatcher-20] t.i.DCounterTreeLeaf - asked: 312028 67.142.96.53 - 7
+    2017-07-16 22:32:56.810UTC INFO [ip-akka.actor.default-dispatcher-20] t.i.DCounterTreeLeaf - asked: 311459 75.163.91.104 - 2
+    2017-07-16 22:33:23.200UTC ERROR[ip-akka.actor.default-dispatcher-16] t.b.CountFromFile$ - java.util.concurrent.TimeoutException: Futures timed out after [30 seconds]
+    2017-07-16 22:33:23.206UTC INFO [ip-akka.actor.default-dispatcher-10] t.Terminator - Actor[akka://ip/user/emitter#-2055043580] has terminated, shutting down system
+
+Meanwhile there are dead letters:
+
+    2017-07-16 22:32:56.295UTC INFO [ip-akka.actor.default-dispatcher-2] a.a.DeadLetterActorRef - Message [traffic.CountsTree] from Actor[akka://ip/user/counter/counter-103/counter-103-19/counter-103-19-173#1933246622] to Actor[akka://ip/deadLetters] was not delivered. [8] dead letters encountered. This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' and 'akka.log-dead-letters-during-shutdown'.
+    2017-07-16 22:32:56.295UTC INFO [ip-akka.actor.default-dispatcher-2] a.a.DeadLetterActorRef - Message [traffic.CountsTree] from Actor[akka://ip/user/counter/counter-104/counter-104-1/counter-104-1-169#1017696476] to Actor[akka://ip/deadLetters] was not delivered. [9] dead letters encountered. This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' and 'akka.log-dead-letters-during-shutdown'.
+    2017-07-16 22:32:56.295UTC INFO [ip-akka.actor.default-dispatcher-2] a.a.DeadLetterActorRef - Message [traffic.CountsTree] from Actor[akka://ip/user/counter/counter-100/counter-100-0/counter-100-0-178#2134755659] to Actor[akka://ip/deadLetters] was not delivered. [10] dead letters encountered, no more dead letters will be logged. This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' and 'akka.log-dead-letters-during-shutdown'.
+
+I didn't notice the last message, before.  No wonder there are always 10, that's the limit!
+
+Could it be that some of the actors are gone, and we're waiting for them to response, hence the timeout?
+
+Let's up the number of dead letters.  10K? Yikes, hit the limit.  100K?  13140 recorded.  That's a lot. 
+
+...
+
+Add a listener via https://stackoverflow.com/a/23911129
+
+2017-07-16 22:54:44.945UTC ERROR[ip-akka.actor.default-dispatcher-25] t.DeadLetterListener - akka://ip/user/counter/counter-96/counter-96-81 failed to akka://ip/deadLetters
+2017-07-16 22:54:44.945UTC ERROR[ip-akka.actor.default-dispatcher-25] t.DeadLetterListener - akka://ip/user/counter/counter-69/counter-69-120 failed to akka://ip/deadLetters
+2017-07-16 22:54:44.945UTC ERROR[ip-akka.actor.default-dispatcher-25] t.DeadLetterListener - akka://ip/user/counter/counter-73/counter-73-115 failed to akka://ip/deadLetters
+
+WTF?  failed to deliver TO the dead letter queue???
+
+
+
+
 ##### June 30 2017 - Pro-D!
 
 Thinking about it the past few days...

@@ -41,7 +41,7 @@ object WebServer {
     val route =
       get {
         pathSingleSlash {
-          onSuccess(ask(counter, CounterTree.AskForCounts).mapTo[CountsTree]){ tree =>
+          onSuccess(ask(counter, CounterTreeMessage.AskForCounts).mapTo[CountsTree]){ tree =>
             val results = toHtml(tree, 0)
             println(results)
             complete(HttpEntity(ContentTypes.`text/html(UTF-8)`,"<html><body>" + results + "</body></html>"))

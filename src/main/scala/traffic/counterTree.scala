@@ -1,7 +1,10 @@
 package traffic
 
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.actor._
+import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
 
@@ -9,8 +12,10 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-object CounterTree {
+object CounterTreeMessage {
   case object AskForCounts
+
+  val count = new AtomicInteger(0)
 }
 
 
@@ -23,6 +28,8 @@ object CounterTree {
  */
 abstract class CounterTreeLeaf[T](val label: String) extends Actor with Counter with SimpleListCountingStrategy {
 
+  val log = Logging.getLogger(context.system, this)
+
   def receive = {
     case SetListener(cl) =>
       setListener(Some(cl))
@@ -30,7 +37,8 @@ abstract class CounterTreeLeaf[T](val label: String) extends Actor with Counter 
     case UpdateCountFor(_) =>
       increment
 
-    case CounterTree.AskForCounts =>
+    case CounterTreeMessage.AskForCounts =>
+      log.info(s"asked: ${CounterTreeMessage.count.incrementAndGet} $label - $count")
       sender ! CountsTree(label, Count(count, 1, if(count == 0) 1 else 0), List())
 
     case EmitCount(emitter) =>
@@ -46,6 +54,9 @@ abstract class CounterTreeLeaf[T](val label: String) extends Actor with Counter 
  * no counting happens here, we instead manage a portion of the tree
  */
 abstract class CounterTreeNode[T](val label: String) extends Actor with CounterTreeNodeChildFactory[T] {
+
+  val log = Logging.getLogger(context.system, this)
+
   // need these to be able to use Future in `receive`... which seems a bit klunky
   // TODO: what set the timeout to?
   implicit val timeout = Timeout(1 seconds)
@@ -55,9 +66,9 @@ abstract class CounterTreeNode[T](val label: String) extends Actor with CounterT
     case update: UpdateCountFor[T] =>
       childFor(update.value) ! update
 
-    case CounterTree.AskForCounts =>
+    case CounterTreeMessage.AskForCounts =>
       val childFutures = context.children.map{
-        ask(_, CounterTree.AskForCounts).mapTo[CountsTree]
+        ask(_, CounterTreeMessage.AskForCounts).mapTo[CountsTree]
       }
       val copyOfSenderToUseFromTheFuture = sender // http://stackoverflow.com/a/25402857
       Future.sequence(childFutures).map{ childTrees =>
@@ -74,6 +85,9 @@ abstract class CounterTreeNode[T](val label: String) extends Actor with CounterT
 
     case forget: ForgetOldCounts =>
       context.children.foreach(_ ! forget)
+
+    case Terminated(ref) =>
+      log.error(s"uh oh, ${ref} died")
   }
 
 // TODO: need to rethink this part
@@ -109,6 +123,7 @@ protected trait CounterTreeNodeChildFactory[T] {
 
   def newChild(value: T) = {
     val child = context.actorOf(Props(childClass, childNodeLabel(value)), childActorName(value))
+    context.watch(child)
     childCreatedHook(child)
     child
   }

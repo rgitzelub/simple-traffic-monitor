@@ -12,7 +12,7 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.joda.time.{DateTime, JodaTimePermission}
 import traffic.by_ip_address.CountRandom.system
 import traffic.impl.{IpAddress, IpAddressTreeCounter}
-import traffic.{CounterTree, CountsTree, Emitter, Terminator, UpdateCountFor}
+import traffic.{CounterTreeMessage, CountsTree, DeadLetterListener, Emitter, Terminator, UpdateCountFor}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, _}
@@ -30,18 +30,24 @@ object CountFromFile {
 
   def main(args: Array[String]): Unit = {
 
+
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
     val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "counter"), "counter")
+
+    val seance = system.actorOf(Props(classOf[DeadLetterListener]))
+    system.eventStream.subscribe(seance, classOf[DeadLetter])
 
     log.info("reading...")
 
 //    val file = new File("/Users/rodneygitzel/Downloads/search-results-2017-06-30T14-55-22.422-0700.csv")
     val file = new File("/Users/rodneygitzel/Downloads/elb/t2")
 
+    val N = 20 * 100000
+
     var i = 0
-    io.Source.fromFile(file).getLines.take(20 * 100000).foreach{ line =>
+    io.Source.fromFile(file).getLines.take(N).foreach{ line =>
       val splits = line.split(" ").toVector.map(s => s.replace("\"", ""))
       if(splits.size == 2) {
         val ts = DateTime.parse(splits(0))
@@ -52,21 +58,29 @@ object CountFromFile {
       i += 1
       if(i % 100000 == 0) println(i)
     }
-
+    log.info("done reading")
 
     log.info("extracting counts")
 
     implicit val timeout = Timeout(300 seconds)
 
-    val ct = Await.result(
-      ask(counter, CounterTree.AskForCounts),
-      Duration(300, TimeUnit.SECONDS)
-    ).asInstanceOf[CountsTree]
+    try {
+      val ct = Await.result(
+        ask(counter, CounterTreeMessage.AskForCounts),
+        Duration(30, TimeUnit.SECONDS)
+      ).asInstanceOf[CountsTree]
 
-    log.info(ct.count.toString)
+      log.info("done")
 
-    emitter ! Stop
-
-    system.terminate()
+      //    log.info("Final: " + ct.count.toString)
+    }
+    catch {
+      case e: Exception =>
+        log.error(e.toString)
+    }
+    finally {
+      emitter ! Stop
+      system.terminate()
+    }
   }
 }

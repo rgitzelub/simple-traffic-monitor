@@ -52,7 +52,7 @@ object CountRandom {
 
     def printCurrentTree = {
       log.info("====================")
-      val finalCount = Await.result(ask(counter, CounterTree.AskForCounts), askTimeout).asInstanceOf[CountsTree]
+      val finalCount = Await.result(ask(counter, CounterTreeMessage.AskForCounts), askTimeout).asInstanceOf[CountsTree]
       log.info(finalCount.count.toString)
       finalCount.print(0){ x => log.info(x.toString) }
     }
