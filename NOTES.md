@@ -98,6 +98,48 @@ And... lots of 10s timeouts.
 
 So... timing is relevant.
 
+....
+
+Later cranked the timeouts to 10 minutes, and read the whole file, nearly 10 million lines, and... it works!
+
+9906423 rows, 1154099 leaf actors
+
+    2017-07-16  INFO [ip-akka.actor.default-dispatcher-3] a.e.s.Slf4jLogger - Slf4jLogger started
+    2017-07-16 05:25:48.715UTC INFO [ip-akka.actor.default-dispatcher-2] t.b.CountFromFile$ - reading...
+    2017-07-16 05:27:37.914UTC INFO [ip-akka.actor.default-dispatcher-7] t.b.CountFromFile$ - done reading
+    2017-07-16 05:27:37.914UTC INFO [ip-akka.actor.default-dispatcher-7] t.b.CountFromFile$ - extracting counts
+    2017-07-16 05:27:37.928UTC INFO [ip-akka.actor.default-dispatcher-22] t.i.DCounterTreeLeaf - asked: 1 1.124.49.7 - 2
+    2017-07-16 05:27:37.932UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 2 105.1.225.16 - 4
+    2017-07-16 05:27:37.932UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 3 103.1.182.142 - 2
+    2017-07-16 05:27:37.971UTC INFO [ip-akka.actor.default-dispatcher-15] t.i.DCounterTreeLeaf - asked: 4 106.184.0.178 - 13
+    2017-07-16 05:27:37.971UTC INFO [ip-akka.actor.default-dispatcher-15] t.i.DCounterTreeLeaf - asked: 5 104.102.24.119 - 13
+    ...
+    2017-07-16 05:29:49.380UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154093 71.91.198.73 - 4
+    2017-07-16 05:29:49.380UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154092 71.91.198.148 - 11
+    2017-07-16 05:29:49.380UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154094 71.91.203.84 - 1
+    2017-07-16 05:29:49.380UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154095 71.91.22.223 - 1
+    2017-07-16 05:29:49.381UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154096 71.91.29.125 - 1
+    2017-07-16 05:29:49.381UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154097 71.91.29.202 - 1
+    2017-07-16 05:29:49.381UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154098 71.91.29.243 - 1
+    2017-07-16 05:29:49.607UTC INFO [ip-akka.actor.default-dispatcher-4] t.i.DCounterTreeLeaf - asked: 1154099 66.249.89.142 - 107684
+    2017-07-16 05:29:49.607UTC INFO [ip-akka.actor.default-dispatcher-4] t.b.CountFromFile$ - done
+
+
+So about two minutes to count across 1.15 million actors. Interesting that the log shows the first 30 lines or so, then stops... and then
+suddenly dumps. The logging actor doesn't get as many slices?
+
+Hmmm, what if I don't log each?
+
+    2017-07-16  INFO [ip-akka.actor.default-dispatcher-3] a.e.s.Slf4jLogger - Slf4jLogger started
+    2017-07-16 05:38:38.380UTC INFO [ip-akka.actor.default-dispatcher-3] t.b.CountFromFile$ - reading...
+    2017-07-16 05:40:34.745UTC INFO [ip-akka.actor.default-dispatcher-2] t.b.CountFromFile$ - done reading
+    2017-07-16 05:40:34.745UTC INFO [ip-akka.actor.default-dispatcher-2] t.b.CountFromFile$ - extracting counts
+    2017-07-16 05:41:02.555UTC INFO [ip-akka.actor.default-dispatcher-8] t.b.CountFromFile$ - done
+    2017-07-16 05:41:02.555UTC INFO [ip-akka.actor.default-dispatcher-8] t.b.CountFromFile$ - Final: 9906423 1154099 0
+
+Not even 30s.  Egad.
+
+
 
 ##### June 30 2017 - Pro-D!
 

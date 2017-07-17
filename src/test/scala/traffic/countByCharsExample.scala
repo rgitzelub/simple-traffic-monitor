@@ -48,13 +48,13 @@ object TrafficMain {
 //    val list = List("10", "12", "32", "30", "12", "13")
     list.foreach{ v =>
       println(v)
-      counter ! UpdateCountFor(v.toString)
+      counter ! CounterTreeMessage.UpdateCountFor(v.toString)
     }
 
     // at this point the othe cascading is still happening, we've only for sure sent the top-level message
 
     println("emitting...")
-    counter ! EmitCount(emitter)
+    counter ! CounterTreeMessage.EmitCount(emitter)
 
 
     // so it's likely the update messages *and* the emit messages are cascading simultaneously...
@@ -64,6 +64,6 @@ object TrafficMain {
     // how do we wait until the messages to emitter have cascade through all the actors?
     Thread.sleep(1000)
 
-    emitter ! Stop
+    emitter ! Emitter.Stop
   }
 }

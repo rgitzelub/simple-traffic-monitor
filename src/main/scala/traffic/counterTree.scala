@@ -15,6 +15,16 @@ import scala.concurrent.duration._
 object CounterTreeMessage {
   case object AskForCounts
 
+  case class UpdateCountFor[T](value: T)
+
+  // drop the counts for anything more than `seconds` old
+  case class ForgetOldCounts(seconds: Int)
+
+  case class EmitCount(emitter: ActorRef)
+
+  case class SetListener(cl: CountListener)
+
+  // temporary counter for exploring how fast this goes
   val count = new AtomicInteger(0)
 }
 
@@ -31,20 +41,20 @@ abstract class CounterTreeLeaf[T](val label: String) extends Actor with Counter 
   val log = Logging.getLogger(context.system, this)
 
   def receive = {
-    case SetListener(cl) =>
+    case CounterTreeMessage.SetListener(cl) =>
       setListener(Some(cl))
 
-    case UpdateCountFor(_) =>
+    case CounterTreeMessage.UpdateCountFor(_) =>
       increment
 
     case CounterTreeMessage.AskForCounts =>
-      log.info(s"asked: ${CounterTreeMessage.count.incrementAndGet} $label - $count")
+//      log.info(s"asked: ${CounterTreeMessage.count.incrementAndGet} $label - $count")
       sender ! CountsTree(label, Count(count, 1, if(count == 0) 1 else 0), List())
 
-    case EmitCount(emitter) =>
-      emitter ! CountToEmit(label, count)
+    case CounterTreeMessage.EmitCount(emitter) =>
+      emitter ! Emitter.CountToEmit(label, count)
 
-    case msg: ForgetOldCounts =>
+    case msg: CounterTreeMessage.ForgetOldCounts =>
       forgetOlderThan(msg.seconds)
   }
 }
@@ -59,11 +69,11 @@ abstract class CounterTreeNode[T](val label: String) extends Actor with CounterT
 
   // need these to be able to use Future in `receive`... which seems a bit klunky
   // TODO: what set the timeout to?
-  implicit val timeout = Timeout(10 seconds)
+  implicit val timeout = Timeout(10 minutes)
   import context.dispatcher
 
   def receive = {
-    case update: UpdateCountFor[T] =>
+    case update: CounterTreeMessage.UpdateCountFor[T] =>
       childFor(update.value) ! update
 
     case CounterTreeMessage.AskForCounts =>
@@ -77,21 +87,18 @@ abstract class CounterTreeNode[T](val label: String) extends Actor with CounterT
       }
       .recover {
         case e =>
-          log.error("ask failed: " + e.toString)
+          log.error(s"AskForCounts failed for children of '${label}': ${e.toString}")
       }
 
     // the rest of these are just passed along
-    case emit: EmitCount =>
+    case emit: CounterTreeMessage.EmitCount =>
       context.children.foreach(_ ! emit)
 
-    case set: SetListener =>
+    case set: CounterTreeMessage.SetListener =>
       context.children.foreach(_ ! set)
 
-    case forget: ForgetOldCounts =>
+    case forget: CounterTreeMessage.ForgetOldCounts =>
       context.children.foreach(_ ! forget)
-
-    case Terminated(ref) =>
-      log.error(s"uh oh, ${ref} died")
   }
 
 // TODO: need to rethink this part

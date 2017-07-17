@@ -26,7 +26,7 @@ object CountRandom {
     val notifier = system.actorOf(Props[Notifier], "notifier")
 
     val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "Address Counter"), "counter")
-    counter ! SetListener(new SimpleThresholdListener(notifier, 10, 4, 3, 2))
+    counter ! CounterTreeMessage.SetListener(new SimpleThresholdListener(notifier, 10, 4, 3, 2))
 
     log.info("counting...")
 
@@ -39,7 +39,7 @@ object CountRandom {
 
     1.to(N)
       .foreach{ i =>
-        counter ! UpdateCountFor(IpAddress.random4)
+        counter ! CounterTreeMessage.UpdateCountFor(IpAddress.random4)
         if(i % updateProgressEvery == 0) log.info(s"$i addresses submitted")
         Thread.sleep(delayMs)
       }
@@ -60,15 +60,15 @@ object CountRandom {
     printCurrentTree
 
     Thread.sleep(100)
-    counter ! ForgetOldCounts(1)
+    counter ! CounterTreeMessage.ForgetOldCounts(1)
     printCurrentTree
 
     Thread.sleep(500)
-    counter ! ForgetOldCounts(1)
+    counter ! CounterTreeMessage.ForgetOldCounts(1)
     printCurrentTree
 
     Thread.sleep(800)
-    counter ! ForgetOldCounts(1)
+    counter ! CounterTreeMessage.ForgetOldCounts(1)
     printCurrentTree
 
     system.terminate()

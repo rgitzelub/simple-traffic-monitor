@@ -8,11 +8,10 @@ import akka.actor._
 import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import org.joda.time.{DateTime, JodaTimePermission}
-import traffic.by_ip_address.CountRandom.system
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.DateTime
 import traffic.impl.{IpAddress, IpAddressTreeCounter}
-import traffic.{CounterTreeMessage, CountsTree, DeadLetterListener, Emitter, Terminator, UpdateCountFor}
+import traffic.{CounterTreeMessage, CountsTree, DeadLetterListener, Emitter, Terminator}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, _}
@@ -47,13 +46,13 @@ object CountFromFile {
     val N = 40 * 100000
 
     var i = 0
-    io.Source.fromFile(file).getLines.take(N).foreach{ line =>
+    io.Source.fromFile(file).getLines.take(100).foreach{ line =>
       val splits = line.split(" ").toVector.map(s => s.replace("\"", ""))
       if(splits.size == 2) {
         val ts = DateTime.parse(splits(0))
         val address = IpAddress.fromString(splits(1))
         //      println(address, ts)
-        counter ! UpdateCountFor(address)
+        counter ! CounterTreeMessage.UpdateCountFor(address)
       }
       i += 1
       if(i % 100000 == 0) println(i)
@@ -62,17 +61,20 @@ object CountFromFile {
 
     log.info("extracting counts")
 
-    implicit val timeout = Timeout(300 seconds)
+    implicit val timeout = Timeout(30 minutes)
 
     try {
       val ct = Await.result(
         ask(counter, CounterTreeMessage.AskForCounts),
-        Duration(30, TimeUnit.SECONDS)
+        Duration(30, TimeUnit.MINUTES)
       ).asInstanceOf[CountsTree]
 
       log.info("done")
 
-      //    log.info("Final: " + ct.count.toString)
+      log.info("Final: " + ct.count.toString)
+
+      // wait for logger to catch up
+      Thread.sleep(1000 * 60 * 1)
     }
     catch {
       case e: Exception =>
