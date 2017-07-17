@@ -59,7 +59,7 @@ abstract class CounterTreeNode[T](val label: String) extends Actor with CounterT
 
   // need these to be able to use Future in `receive`... which seems a bit klunky
   // TODO: what set the timeout to?
-  implicit val timeout = Timeout(1 seconds)
+  implicit val timeout = Timeout(10 seconds)
   import context.dispatcher
 
   def receive = {
@@ -74,6 +74,10 @@ abstract class CounterTreeNode[T](val label: String) extends Actor with CounterT
       Future.sequence(childFutures).map{ childTrees =>
         val combinedCount = Count.sum(childTrees.map(_.count))
         copyOfSenderToUseFromTheFuture ! CountsTree(label, combinedCount, childTrees)
+      }
+      .recover {
+        case e =>
+          log.error("ask failed: " + e.toString)
       }
 
     // the rest of these are just passed along

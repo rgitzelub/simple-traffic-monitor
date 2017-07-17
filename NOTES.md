@@ -31,7 +31,72 @@ Add a listener via https://stackoverflow.com/a/23911129
 
 WTF?  failed to deliver TO the dead letter queue???
 
+Grab the 1st 100 chars of the message:
 
+2017-07-16 23:41:39.791UTC ERROR[ip-akka.actor.default-dispatcher-6] t.DeadLetterListener - akka://ip/user/counter/counter-73/counter-73-211 failed to akka://ip/deadLetters: CountsTree(73.211.x.x,366 144 0,List(CountsTree(73.211.103.x,2 1 0,List(CountsTree(73.211.103.107,2
+2017-07-16 23:41:39.791UTC ERROR[ip-akka.actor.default-dispatcher-6] t.DeadLetterListener - akka://ip/user/counter/counter-97/counter-97-85 failed to akka://ip/deadLetters: CountsTree(97.85.x.x,338 134 0,List(CountsTree(97.85.0.x,1 1 0,List(CountsTree(97.85.0.187,1 1 0,Lis
+2017-07-16 23:41:39.791UTC ERROR[ip-akka.actor.default-dispatcher-6] t.DeadLetterListener - akka://ip/user/counter/counter-32/counter-32-214 failed to akka://ip/deadLetters: CountsTree(32.214.x.x,261 78 0,List(CountsTree(32.214.0.x,1 1 0,List(CountsTree(32.214.0.239,1 1 0,L
+2017-07-16 23:41:39.791UTC ERROR[ip-akka.actor.default-dispatcher-6] t.DeadLetterListener - akka://ip/user/counter/counter-64/counter-64-139 failed to akka://ip/deadLetters: CountsTree(64.139.x.x,316 10 0,List(CountsTree(64.139.147.x,275 1 0,List(CountsTree(64.139.147.166,2
+
+CountsTree(64.139.x.x,316 10 0,...) *from* akka://ip/user/counter/counter-64/counter-64-139.... which would be TO .../counter-64?
+
+But if parent is dead, shouldn't the children be dead?  
+
+Hmmm, I wonder if there's a pattern to *which* actors...
+
+    akka://ip/user/counter/counter-123/counter-123-201
+    akka://ip/user/counter/counter-123/counter-123-211
+    akka://ip/user/counter/counter-124
+    akka://ip/user/counter/counter-125/counter-125-19
+    akka://ip/user/counter/counter-125/counter-125-252
+    akka://ip/user/counter/counter-125/counter-125-7
+    akka://ip/user/counter/counter-125/counter-125-88
+    akka://ip/user/counter/counter-128/counter-128-112
+    akka://ip/user/counter/counter-128/counter-128-114
+    akka://ip/user/counter/counter-128/counter-128-136
+    akka://ip/user/counter/counter-128/counter-128-147/counter-128-147-28
+    akka://ip/user/counter/counter-128/counter-128-157
+
+
+Mostly it's A-B, but quite a few A-B-C, and a handful of just A.
+
+Is there a termination event I can subscribe to?  Hmm, not that I can find.
+
+So... 300K inputs succeeds.  310K gets over 200 dead letters.  What's happening when that threshold? 
+
+...
+
+Aha! A clue... when the parent calls `ask` it doesn't always succeed... after I sequence all the child
+futures, check for an exception... sure enough.
+
+    2017-07-16 00:47:05.510UTC ERROR[ip-akka.actor.default-dispatcher-7] t.i.IpAddressTreeCounter - ask failed: akka.pattern.AskTimeoutException: Ask timed out on [Actor[akka://ip/user/counter/counter-104#702883192]] after [1000 ms]. Sender[null] sent message of type "traffic.CounterTreeMessage$AskForCounts$".
+
+Now, there were 37 dead letters, shouldn't there be more exceptions?  well, it's a start.
+
+So here, 104.x.x.x failed.  Yup, got a dead letter
+
+    2017-07-16 00:47:05.572UTC ERROR[ip-akka.actor.default-dispatcher-7] t.DeadLetterListener - akka://ip/user/counter/counter-104 failed to akka://ip/deadLetters: CountsTree(104.x.x.x,20503 1170 0,List(CountsTree(104.0.x.x,16 8 0,List(CountsTree(104.0.100.x,5 1 0
+
+So what happens when `receive` throws an exception?
+
+The actor dies.  *facepalm*
+
+Well, one way to avoid the exception, is to wait longer... I had a 1.0s timeout for a node to wait for the children. 
+Set it to 10s and... no problems, even for 2 million!
+
+Okay, what if I read them ALL in?  I'm not even sure how many that is...
+
+(And I think I should, as part of building the 'counts tree', is record how long each node took.)
+
+(up to 6.8 million and the macbook fan is running hard)
+
+9.9 million apparently.  From the slowly-appearing logs, it appears it's taking awhile to get down to the leaves.
+
+And... lots of 10s timeouts.
+
+4.0 million? works fine. 
+
+So... timing is relevant.
 
 
 ##### June 30 2017 - Pro-D!

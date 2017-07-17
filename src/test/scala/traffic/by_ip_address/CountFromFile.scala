@@ -44,7 +44,7 @@ object CountFromFile {
 //    val file = new File("/Users/rodneygitzel/Downloads/search-results-2017-06-30T14-55-22.422-0700.csv")
     val file = new File("/Users/rodneygitzel/Downloads/elb/t2")
 
-    val N = 20 * 100000
+    val N = 40 * 100000
 
     var i = 0
     io.Source.fromFile(file).getLines.take(N).foreach{ line =>

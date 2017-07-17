@@ -1,14 +1,12 @@
 package traffic
 
-import akka.actor.{Actor, DeadLetter}
-import akka.event.Logging
+import akka.actor.{Actor, ActorLogging, DeadLetter}
 
-class DeadLetterListener extends Actor {
 
-  val log = Logging.getLogger(context.system, this)
+class DeadLetterListener extends Actor with ActorLogging {
 
   def receive = {
     case DeadLetter(msg, from, to) =>
-      log.error(from.path + " failed to " + to.path)
+      log.error(from.path + " failed to " + to.path + ": " + msg.toString.substring(0,100))
   }
 }
