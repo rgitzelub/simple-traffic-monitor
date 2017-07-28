@@ -1,31 +1,37 @@
 package traffic
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import org.joda.time.DateTime
+import traffic.counting.{Countable, CounterTreeLeaf, CounterTreeMessage, CounterTreeNode}
 
 import scala.util.Random
 
 
-class ThirdLastCharCounterTreeNode(name: String) extends CounterTreeNode[String](name) {
-  def childNodeLabel(value: String) = "" + value.charAt(value.length-3)
-  def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-3)
+case class CountableString(s: String) extends Countable {
+  val timestamp = new DateTime
+}
+
+class ThirdLastCharCounterTreeNode(name: String) extends CounterTreeNode[CountableString](name) {
+  def childNodeLabel(value: CountableString) = "" +  value.s.charAt( value.s.length-3)
+  def childActorName(value: CountableString) = name + "-" + "node" +  value.s.charAt( value.s.length-3)
   def childClass = classOf[SecondLastCharCounterTreeNode]
 }
 
 
-class SecondLastCharCounterTreeNode(name: String) extends CounterTreeNode[String](name) {
-  def childNodeLabel(value: String) = "" + value.charAt(value.length-2)
-  def childActorName(value: String) = name + "-" + "node" + value.charAt(value.length-2)
+class SecondLastCharCounterTreeNode(name: String) extends CounterTreeNode[CountableString](name) {
+  def childNodeLabel(value: CountableString) = "" +  value.s.charAt( value.s.length-2)
+  def childActorName(value: CountableString) = name + "-" + "node" +  value.s.charAt( value.s.length-2)
   def childClass = classOf[LastCharCounterTreeNode]
 }
 
 
-class LastCharCounterTreeNode(name: String) extends CounterTreeNode[String](name) {
-  def childNodeLabel(value: String) = "" + value.charAt(value.length-1)
-  def childActorName(value: String) = name + "-" + "leaf" + value.last.toString
+class LastCharCounterTreeNode(name: String) extends CounterTreeNode[CountableString](name) {
+  def childNodeLabel(value: CountableString) = "" +  value.s.charAt( value.s.length-1)
+  def childActorName(value: CountableString) = name + "-" + "leaf" +  value.s.last.toString
   def childClass = classOf[MyCounterTreeLeaf]
 }
 
-class MyCounterTreeLeaf(name: String) extends CounterTreeLeaf[String](name) {
+class MyCounterTreeLeaf(name: String) extends CounterTreeLeaf[CountableString](name) {
 }
 
 
@@ -48,7 +54,7 @@ object TrafficMain {
 //    val list = List("10", "12", "32", "30", "12", "13")
     list.foreach{ v =>
       println(v)
-      counter ! CounterTreeMessage.UpdateCountFor(v.toString)
+      counter ! CounterTreeMessage.UpdateCountFor(CountableString(v.toString))
     }
 
     // at this point the othe cascading is still happening, we've only for sure sent the top-level message

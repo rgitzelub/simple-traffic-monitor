@@ -1,7 +1,9 @@
-package traffic.impl
+package traffic.impl.ip
+
+import org.joda.time.DateTime
+import traffic.counting.Countable
 
 import scala.util.Random
-
 
 
 case class IpAddress(a: Int, b: Int, c: Int, d: Int)

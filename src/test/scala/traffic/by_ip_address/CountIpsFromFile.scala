@@ -10,14 +10,15 @@ import akka.pattern.ask
 import akka.util.Timeout
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
-import traffic.impl.{IpAddress, IpAddressTreeCounter}
-import traffic.{CounterTreeMessage, CountsTree, DeadLetterListener, Emitter, Terminator}
+import traffic.counting.{CounterTreeMessage, CountsTree}
+import traffic.impl.ip.{HitTreeCounter, IpAddress, PageHit}
+import traffic.{DeadLetterListener, Emitter, Terminator}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, _}
 
 
-object CountFromFile {
+object CountIpsFromFile {
 
   val system = ActorSystem("ip")
 
@@ -33,26 +34,27 @@ object CountFromFile {
     val emitter = system.actorOf(Props[Emitter], "emitter")
     system.actorOf(Props(classOf[Terminator], emitter), "terminator")
 
-    val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "counter"), "counter")
+    val counter = system.actorOf(Props(classOf[HitTreeCounter], "counter"), "counter")
 
     val seance = system.actorOf(Props(classOf[DeadLetterListener]))
     system.eventStream.subscribe(seance, classOf[DeadLetter])
-
-    log.info("reading...")
 
 //    val file = new File("/Users/rodneygitzel/Downloads/search-results-2017-06-30T14-55-22.422-0700.csv")
     val file = new File("/Users/rodneygitzel/Downloads/elb/t2")
 
     val N = 40 * 100000
 
+    val lines = io.Source.fromFile(file).getLines.take(100)
+
+    log.info("reading...")
     var i = 0
-    io.Source.fromFile(file).getLines.take(100).foreach{ line =>
+    lines.foreach{ line =>
       val splits = line.split(" ").toVector.map(s => s.replace("\"", ""))
       if(splits.size == 2) {
         val ts = DateTime.parse(splits(0))
         val address = IpAddress.fromString(splits(1))
         //      println(address, ts)
-        counter ! CounterTreeMessage.UpdateCountFor(address)
+        counter ! CounterTreeMessage.UpdateCountFor(PageHit(ts, address))
       }
       i += 1
       if(i % 100000 == 0) println(i)

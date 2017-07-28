@@ -1,4 +1,4 @@
-package traffic
+package traffic.counting
 
 /*
  * a tree of counts extracted from a tree of counters

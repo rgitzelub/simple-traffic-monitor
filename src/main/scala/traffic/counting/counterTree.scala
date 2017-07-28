@@ -1,5 +1,4 @@
-package traffic
-
+package traffic.counting
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -7,6 +6,7 @@ import akka.actor._
 import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
+import traffic._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 object CounterTreeMessage {
   case object AskForCounts
 
-  case class UpdateCountFor[T](value: T)
+  case class UpdateCountFor[T <: Countable](value: T)
 
   // drop the counts for anything more than `seconds` old
   case class ForgetOldCounts(seconds: Int)
@@ -36,23 +36,24 @@ object CounterTreeMessage {
 /*
  * this is where the actual counting happens
  */
-abstract class CounterTreeLeaf[T](val label: String) extends Actor with Counter with SimpleListCountingStrategy {
+abstract class CounterTreeLeaf[T <: Countable](val label: String) extends Actor with Counter[T] with SimpleListCountingStrategy {
 
   val log = Logging.getLogger(context.system, this)
 
   def receive = {
     case CounterTreeMessage.SetListener(cl) =>
-      setListener(Some(cl))
+      val x = Some(cl)
+      setListener(x)
 
-    case CounterTreeMessage.UpdateCountFor(_) =>
-      increment
+    case CounterTreeMessage.UpdateCountFor(v) =>
+      count(v)
 
     case CounterTreeMessage.AskForCounts =>
 //      log.info(s"asked: ${CounterTreeMessage.count.incrementAndGet} $label - $count")
-      sender ! CountsTree(label, Count(count, 1, if(count == 0) 1 else 0), List())
+      sender ! CountsTree(label, Count(currentCount, 1, if(currentCount == 0) 1 else 0), List())
 
     case CounterTreeMessage.EmitCount(emitter) =>
-      emitter ! Emitter.CountToEmit(label, count)
+      emitter ! Emitter.CountToEmit(label, currentCount)
 
     case msg: CounterTreeMessage.ForgetOldCounts =>
       forgetOlderThan(msg.seconds)
@@ -63,7 +64,7 @@ abstract class CounterTreeLeaf[T](val label: String) extends Actor with Counter 
 /*
  * no counting happens here, we instead manage a portion of the tree
  */
-abstract class CounterTreeNode[T](val label: String) extends Actor with CounterTreeNodeChildFactory[T] {
+abstract class CounterTreeNode[T <: Countable](val label: String) extends Actor with CounterTreeNodeChildFactory[T] {
 
   val log = Logging.getLogger(context.system, this)
 
@@ -111,7 +112,7 @@ abstract class CounterTreeNode[T](val label: String) extends Actor with CounterT
 /*
  * breaking this out as a trait makes CounterTreeNode less cluttered
  */
-protected trait CounterTreeNodeChildFactory[T] {
+protected trait CounterTreeNodeChildFactory[T <: Countable] {
   this: CounterTreeNode[T] =>
 
   // what is under us?

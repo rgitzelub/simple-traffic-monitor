@@ -6,8 +6,10 @@ import akka.actor._
 import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
+import org.joda.time.DateTime
 import traffic._
-import traffic.impl.{IpAddress, IpAddressTreeCounter, SimpleThresholdListener}
+import traffic.counting.{CounterTreeMessage, CountsTree}
+import traffic.impl.ip.{HitTreeCounter, IpAddress, PageHit, SimpleThresholdListener}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -25,7 +27,7 @@ object CountRandom {
 
     val notifier = system.actorOf(Props[Notifier], "notifier")
 
-    val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "Address Counter"), "counter")
+    val counter = system.actorOf(Props(classOf[HitTreeCounter], "Address Counter"), "counter")
     counter ! CounterTreeMessage.SetListener(new SimpleThresholdListener(notifier, 10, 4, 3, 2))
 
     log.info("counting...")
@@ -39,7 +41,7 @@ object CountRandom {
 
     1.to(N)
       .foreach{ i =>
-        counter ! CounterTreeMessage.UpdateCountFor(IpAddress.random4)
+        counter ! CounterTreeMessage.UpdateCountFor(PageHit(new DateTime, IpAddress.random4))
         if(i % updateProgressEvery == 0) log.info(s"$i addresses submitted")
         Thread.sleep(delayMs)
       }

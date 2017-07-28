@@ -1,4 +1,26 @@
 
+##### July 28
+
+I'm thinking of changing direction for a bit.  IP addresses are do-able, but are a scaling problem. It would be
+quite interesting to investigate how clustering could improve things, splitting the problem up, optimizing it.
+
+But there's a similar problem that's smaller: monitor by page/client/account.  Which convertables are most active right now?
+Hmmm, it could be conversions as well as traffic.  And it could be over different time frames, last hour, last six hours, etc.
+If we break it up by client and then account, we can also see who's currently busiest.
+
+What would I need?  We've got tonnes of events on S3 so it wouldn't be too difficult to grab a day's worth of active.
+Ingest it to get (timestamp, activation rule id, event).  Hmmm, the leaves could actually be event types!
+
+account -> client -> activation rule -> event type
+
+But... I don't have the client or account, just the activation rule. Oh, wait, we DO have client.  Sweet!
+
+That breaks it down a bit.  The top level node could first break down by initial digit, just to break it up a bit.  Or not.
+
+And in meantime, that's good reason to pursue doing quick read API over the webapp for clients and accounts.  Hmmm.
+
+
+
 ##### July 16
 
 Hmmm. Add some exception logging... log to a file... the Future is definitely timing out.

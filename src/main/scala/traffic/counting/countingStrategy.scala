@@ -1,20 +1,20 @@
-package traffic
+package traffic.counting
 
 import akka.actor.Actor
 
 
 
 trait CountingStrategy {
-  def count: Long
-  def incrementCount: Unit
+  def currentCount: Long
+  def incrementCount(value: Countable): Unit
   def forgetOlderThan(seconds: Int)
 }
 
 trait PlainOldCountingStrategy extends CountingStrategy {
-  var count = 0
-  def incrementCount = count += 1
+  var currentCount = 0
+  def incrementCount(value: Countable) = currentCount += 1
   def forgetOlderThan(seconds: Int) =
-    count = 0
+    currentCount = 0
 }
 
 trait SimpleListCountingStrategy extends CountingStrategy {
@@ -23,10 +23,10 @@ trait SimpleListCountingStrategy extends CountingStrategy {
 
   private def now = System.currentTimeMillis
 
-  def count: Long = cachedSize
+  def currentCount: Long = cachedSize
 
-  def incrementCount = {
-    timestamps = (now +: timestamps)
+  def incrementCount(value: Countable) = {
+    timestamps = (value.timestamp.getMillis +: timestamps)
     cachedSize = timestamps.size
   }
 
@@ -38,10 +38,10 @@ trait SimpleListCountingStrategy extends CountingStrategy {
 }
 
 trait CountListener {
-  def notify(counter: Counter, count: Long)
+  def notify(counter: Counter[_], count: Long)
 }
 
-trait Counter {
+trait Counter[T <: Countable] {
   this: Actor with CountingStrategy =>
 
   // a human name for what the actor is counting
@@ -57,11 +57,11 @@ trait Counter {
     countListener = cl
   }
 
-  def increment = {
-    incrementCount
+  def count(value: Countable) = {
+    incrementCount(value)
     countListener.foreach{ cl =>
       //      println(label, count)
-      cl.notify(this, count)
+      cl.notify(this, currentCount)
     }
   }
 }

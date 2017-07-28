@@ -4,14 +4,14 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.HttpMethods._
-import akka.http.scaladsl.model._
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
-import traffic.impl.{IpAddress, IpAddressTreeCounter, SimpleThresholdListener}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.util.Timeout
+import org.joda.time.DateTime
+import traffic.counting.{CounterTreeMessage, CountsTree}
+import traffic.impl.ip.{HitTreeCounter, IpAddress, PageHit, SimpleThresholdListener}
 
 import scala.concurrent.duration._
 import scala.io.StdIn
@@ -35,7 +35,7 @@ object WebServer {
 
     implicit val timeout = Timeout(3 seconds)
     val notifier = system.actorOf(Props[Notifier], "notifier")
-    val counter = system.actorOf(Props(classOf[IpAddressTreeCounter], "Address Counter"), "counter")
+    val counter = system.actorOf(Props(classOf[HitTreeCounter], "Address Counter"), "counter")
     counter ! CounterTreeMessage.SetListener(new SimpleThresholdListener(notifier, 10, 4, 3, 2))
 
     val route =
@@ -49,7 +49,7 @@ object WebServer {
         } ~
         path("hit") {
           parameters(('address)).as(HitParams) { params =>
-            counter ! CounterTreeMessage.UpdateCountFor(IpAddress.fromString(params.address))
+            counter ! CounterTreeMessage.UpdateCountFor(PageHit(new DateTime, IpAddress.fromString(params.address)))
             complete("PONG!")
           }
         } ~
