@@ -78,6 +78,8 @@ object CountPageEventsFromFile {
 
       ct.print(0){ x => println(x.toString) }
 
+      ct.children.toList.sortBy(_.count.total).foreach(x => println(x.count))
+
       // wait for logger to catch up
       Thread.sleep(1000 * 5)
     }

@@ -44,6 +44,31 @@ Right now you just get the count of leaf nodes:
 
 (also note I've made up the account ID, I don't have access to that, yet.)
 
+But... hmm, what's the point?  I wrote a variation to sort the accounts, see who's on top...
+
+33441 7 0
+35231 20 0
+43665 3 0
+44185 8 0
+46932 9 0
+48442 9 0
+66653 3 0
+115098 184 0
+
+(That doesn't have any ids, just the counts.)
+
+And... so what?  Could query the stats db for this.
+
+Hmmm.
+
+I think I've lost sight of the original thing, which was not to query the actors for what they knew, but
+for the actors themselves to pipe up with something interesting happens, like their count suddenly increases.
+
+Fair enough, the 'asking for counts' thing is more for verifying counts are correct at a given time.  To prove
+that the hierarchy seems to work.
+
+Now... hmmm. 
+
 
 
 ##### July 16
