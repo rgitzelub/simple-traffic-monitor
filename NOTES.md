@@ -19,6 +19,31 @@ That breaks it down a bit.  The top level node could first break down by initial
 
 And in meantime, that's good reason to pursue doing quick read API over the webapp for clients and accounts.  Hmmm.
 
+.....
+
+So, it took longer to refactor things to make 'timestamp' required in all the things we count, than it did to write the code
+to count pages!  Good. 
+
+I grabbed yesterday's events, 1.3M of them (370Mb), and...
+
+21:28:07.455UTC INFO [page_events_counter-akka.actor.default-dispatcher-19] CountPageEventsFromFile$ - done. read 1309161 events
+21:28:07.455UTC INFO [page_events_counter-akka.actor.default-dispatcher-19] CountPageEventsFromFile$ - extracting counts...
+21:28:08.005UTC INFO [page_events_counter-akka.actor.default-dispatcher-25] CountPageEventsFromFile$ - done
+21:28:08.005UTC INFO [page_events_counter-akka.actor.default-dispatcher-25] CountPageEventsFromFile$ - Final: 1309161 6332 0
+
+So took 550ms to extract all of the counts. And, hmmm, one thing that would also be useful is the number of children of each node. 
+Right now you just get the count of leaf nodes:
+
+>counter: 1309161 6332 0
+>  account 00045bfa: 1469 13 0
+>    client 00045bfa-0f36-45ff-b92f-41c11ce558c9: 1469 13 0
+>      activation rule 0167d7ea05c64b9fb38cddbef01c0f52: 490 3 0
+>        EmbeddableActivatedV0.1: 431 1 0
+>        EmbeddableViewedV0.1: 58 1 0
+>        FormSubmittedV0.1: 1 1 0
+
+(also note I've made up the account ID, I don't have access to that, yet.)
+
 
 
 ##### July 16

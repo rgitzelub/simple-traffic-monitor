@@ -10,19 +10,19 @@ class ConvertableEventTreeCounter(name: String) extends CounterTreeNode[Converta
 }
 
 class AccountNode(id: String) extends CounterTreeNode[ConvertableEvent](id) {
-  def childNodeLabel(value: ConvertableEvent) = s"account ${value.accountId} / client ${value.clientId}"
+  def childNodeLabel(value: ConvertableEvent) = s"client ${value.clientId}"
   def childActorName(value: ConvertableEvent) = context.self.path.name + "--" + value.clientId
   val childClass = classOf[ClientNode]
 }
 
 class ClientNode(id: String) extends CounterTreeNode[ConvertableEvent](id) {
-  def childNodeLabel(value: ConvertableEvent) = s"account ${value.accountId} / client ${value.clientId} / activation rule ${value.activationRuleId}"
+  def childNodeLabel(value: ConvertableEvent) = s"activation rule ${value.activationRuleId}"
   def childActorName(value: ConvertableEvent) = context.self.path.name + "--" + value.activationRuleId
   val childClass = classOf[ActivationRuleNode]
 }
 
 class ActivationRuleNode(id: String) extends CounterTreeNode[ConvertableEvent](id) {
-  def childNodeLabel(value: ConvertableEvent) = s"account ${value.accountId} / client ${value.clientId} / activation rule ${value.activationRuleId} / ${value.eventType}"
+  def childNodeLabel(value: ConvertableEvent) = s"${value.eventType}"
   def childActorName(value: ConvertableEvent) = context.self.path.name + "--" + value.eventType
   val childClass = classOf[EventTypeTreeLeaf]
 }

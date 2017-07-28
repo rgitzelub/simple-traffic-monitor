@@ -36,14 +36,14 @@ object CounterTreeMessage {
 /*
  * this is where the actual counting happens
  */
-abstract class CounterTreeLeaf[T <: Countable](val label: String) extends Actor with Counter[T] with SimpleListCountingStrategy {
+abstract class CounterTreeLeaf[T <: Countable](val label: String)
+  extends Actor with Counter[T] with SimpleListCountingStrategy {
 
   val log = Logging.getLogger(context.system, this)
 
   def receive = {
     case CounterTreeMessage.SetListener(cl) =>
-      val x = Some(cl)
-      setListener(x)
+      setListener(Some(cl))
 
     case CounterTreeMessage.UpdateCountFor(v) =>
       count(v)
@@ -64,7 +64,8 @@ abstract class CounterTreeLeaf[T <: Countable](val label: String) extends Actor 
 /*
  * no counting happens here, we instead manage a portion of the tree
  */
-abstract class CounterTreeNode[T <: Countable](val label: String) extends Actor with CounterTreeNodeChildFactory[T] {
+abstract class CounterTreeNode[T <: Countable](val label: String)
+  extends Actor with CounterTreeNodeChildFactory[T] {
 
   val log = Logging.getLogger(context.system, this)
 
