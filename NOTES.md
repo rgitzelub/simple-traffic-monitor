@@ -1,10 +1,76 @@
+##### August 11
+
+I've spent a couple hours figuring out how to break up the test data, to insert "forget" messages every so often, 
+playing with various ideas... streams seemed right, but... no.
+
+Back and forth... turning a list into a list of lists seems easy, except not.  You can't just traverse the original
+list, unless you manually keep track of when to split the next group.  So I did that, with a foldLeft, but it also
+needed some mutable values. :(
+
+    var lastCleanMillis = validEvents.head.timestamp.getMillis
+    val currentList = mutable.MutableList[ConvertableEvent]()
+    val list =
+      validEvents.foldLeft(List[List[ConvertableEvent]]()){ case(acc, event) =>
+        if(event.timestamp.getMillis - lastCleanMillis > sendForgetMessageIntervalMillis) {
+          lastCleanMillis += sendForgetMessageIntervalMillis
+          log.info("start new list at " + event.timestamp.getMillis)
+          val newAcc = currentList.toList +: acc
+          currentList.clear
+          currentList += event
+          newAcc
+        }
+        else
+        {
+          currentList += event
+          acc
+        }
+      }
+    val eventsGroupedByTime1 = (currentList.toList +: list).reverse
+
+
+But... hmmm. Shouldn't need all that mutation.  Could use `partition` recursively, but it would do a full
+traversal every time, and I'm assuming a sorted list.  So came across combining `takeWhile` and `drop` and 
+use (of course) recursion.
+
+    def splitWithinNextInterval(events: List[ConvertableEvent], since: Long, interval: Long) = {
+      val t = events.takeWhile{ event =>
+        event.timestamp.getMillis - since < interval
+      }
+      (t, events.drop(t.size))
+    }
+
+    def groupByTime(events: List[ConvertableEvent], startingAt: Long, interval: Long) = {
+      def r(groups: List[List[ConvertableEvent]], remainingEvents: List[ConvertableEvent], since: Long): List[List[ConvertableEvent]] = {
+        val (first, rest) = splitWithinNextInterval(remainingEvents, since, interval)
+        if(first.size == 0 && rest.size > 0) {
+          r(groups, rest, since + interval)
+        }
+        else {
+          if(rest.size == 0) {
+            groups :+ first
+          }
+          else {
+            r(groups :+ first, rest, since + interval)
+          }
+        }
+      }
+      r(List(), events, startingAt)
+    }
+
+
+That *should* traverse the original list only once.
+
+Of course, the thing now would be to make a generic version of this. You'd need to provide _two_ functions, a Boolean
+to indicate when to split the group off, and another to provide the next break point.  Probably not that hard...
+
 
 ##### July 28
 
 I'm thinking of changing direction for a bit.  IP addresses are do-able, but are a scaling problem. It would be
 quite interesting to investigate how clustering could improve things, splitting the problem up, optimizing it.
+But... that's getting more on the technical side, and not proving anything.
 
-But there's a similar problem that's smaller: monitor by page/client/account.  Which convertables are most active right now?
+There's a similar business problem that's smaller: monitor by page/client/account.  Which convertables are most active right now?
 Hmmm, it could be conversions as well as traffic.  And it could be over different time frames, last hour, last six hours, etc.
 If we break it up by client and then account, we can also see who's currently busiest.
 

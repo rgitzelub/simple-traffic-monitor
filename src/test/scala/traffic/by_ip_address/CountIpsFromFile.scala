@@ -44,7 +44,7 @@ object CountIpsFromFile {
 
     val N = 40 * 100000
 
-    val lines = io.Source.fromFile(file).getLines.take(100)
+    val lines = io.Source.fromFile(file).getLines//.take(N)
 
     log.info("reading...")
     var i = 0
