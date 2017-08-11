@@ -60,9 +60,58 @@ use (of course) recursion.
 
 That *should* traverse the original list only once.
 
+The interesting process was working out the 'pure' way to do it. I started this morning with a big complicated
+block, using mutable code, and gradually teased out different bits (like converting lines to events), instead of
+having them in one big loop.
+
+
 Of course, the thing now would be to make a generic version of this. You'd need to provide _two_ functions, a Boolean
 to indicate when to split the group off, and another to provide the next break point.  Probably not that hard...
 
+Now of course when I run this, all the events are immediately forgotten!  The actors are using realtime clocks, and
+the events are all in the past.  Hmmm.
+
+....
+
+So generalizing it took some massaging, but was good exercise for my sagging FP muscle...
+
+
+    def groupBy[T,B,I](sortedItems: List[T], lowerBound: B, interval: I)(discriminator: (T, B, I) => Boolean)(nextBoundary: (B, I) => B): List[List[T]] = {
+      def r(groups: List[List[T]], items: List[T], currentLowerBoundary: B): List[List[T]] = {
+        val (nextGroup, remainingItems) = {
+          val t = items.takeWhile { item => discriminator(item, currentLowerBoundary, interval) }
+          (t, items.drop(t.size))
+        }
+        if(remainingItems.size == 0) {
+          groups :+ nextGroup
+        }
+        else {
+          r(groups :+ nextGroup, remainingItems, nextBoundary(currentLowerBoundary, interval))
+        }
+      }
+      r(List(), sortedItems, lowerBound)
+    }
+
+    val eventsGroupedByTime3 = groupBy(validEvents, validEvents.head.timestamp.getMillis, sendForgetMessageIntervalMillis )
+      { case (event, boundary, interval ) => event.timestamp.getMillis < boundary + interval }
+      { _ + _ }
+
+    output(eventsGroupedByTime3)
+
+
+
+    val eventsGroupedByTime4 = groupBy(validEvents, validEvents.head.timestamp, sendForgetMessageInterval )
+      { case (event, boundary, interval ) => event.timestamp.minus(interval.toMillis).isBefore(boundary) }
+      { case (boundary, interval ) => boundary.plus(interval.toMillis) }
+
+    output(eventsGroupedByTime4)
+
+
+The interesting outcome I hadn't thought about is the types can be more interesting:  like pass in a DateTime
+ and one of those funky Duration classes! It's not just about millis (though using millis is more efficient).
+ 
+Still, there's a bunch of awkwardness, due to B and I needing to be independent, yet they are tied closely in the
+ implementation.  Maybe there's a simple class to wrap them... 
 
 ##### July 28
 

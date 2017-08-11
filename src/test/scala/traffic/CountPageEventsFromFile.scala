@@ -8,6 +8,7 @@ import akka.actor._
 import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
+import ch.qos.logback.core.sift.Discriminator
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import traffic.by_ip_address.CountRandom.log
@@ -59,11 +60,14 @@ object CountPageEventsFromFile {
 
     val lines = io.Source.fromFile(file).getLines
 
-    val sendForgetMessageIntervalMillis = Duration(5, TimeUnit.SECONDS).toMillis
-    val forgetMessageValueSeconds = Duration(1, TimeUnit.MINUTES).toSeconds.toInt
+    val sendForgetMessageInterval = Duration(5, TimeUnit.SECONDS)
+    val sendForgetMessageIntervalMillis = sendForgetMessageInterval.toMillis
+
+    val forgetMessageInterval = Duration(1, TimeUnit.MINUTES)
+    val forgetMessageIntervalSeconds = forgetMessageInterval.toSeconds.toInt
 
     log.info("reading...")
-    val linesToProcess = lines.take(100000).toList
+    val linesToProcess = lines.take(300).toList
     log.info(linesToProcess.head)
     log.info(linesToProcess.last)
 
@@ -106,11 +110,14 @@ object CountPageEventsFromFile {
       }
     val eventsGroupedByTime1 = (currentList.toList +: list).reverse
 
-    log.info(s"made ${eventsGroupedByTime1.size} groups")
-    eventsGroupedByTime1.foreach{ group =>
-      log.info(s"  ${group.size} from ${group.head.timestamp.getMillis} to ${group.last.timestamp.getMillis}")
+    def output(groups: List[List[ConvertableEvent]]) = {
+      log.info(s"made ${groups.size} groups")
+      groups.foreach { group =>
+        log.info(s"  ${group.size} from ${group.head.timestamp.getMillis} to ${group.last.timestamp.getMillis}")
+      }
     }
 
+    output(eventsGroupedByTime1)
 
     // recursion and 'partition' are a better choice, but unfortunately wouldn't take into account
     //  that the list is already sorted, so it will take considerably longer
@@ -145,11 +152,42 @@ object CountPageEventsFromFile {
     }
 
     val eventsGroupedByTime2 = groupByTime(validEvents, validEvents.head.timestamp.getMillis, sendForgetMessageIntervalMillis)
+    output(eventsGroupedByTime2)
 
-    log.info(s"made ${eventsGroupedByTime2.size} groups")
-    eventsGroupedByTime2.foreach{ group =>
-      log.info(s"  ${group.size} from ${group.head.timestamp.getMillis} to ${group.last.timestamp.getMillis}")
+
+
+
+    def groupBy[T,B,I](sortedItems: List[T], lowerBound: B, interval: I)(discriminator: (T, B, I) => Boolean)(nextBoundary: (B, I) => B): List[List[T]] = {
+      def r(groups: List[List[T]], items: List[T], currentLowerBoundary: B): List[List[T]] = {
+        val (nextGroup, remainingItems) = {
+          val t = items.takeWhile { item => discriminator(item, currentLowerBoundary, interval) }
+          (t, items.drop(t.size))
+        }
+        if(remainingItems.size == 0) {
+          groups :+ nextGroup
+        }
+        else {
+          r(groups :+ nextGroup, remainingItems, nextBoundary(currentLowerBoundary, interval))
+        }
+      }
+      r(List(), sortedItems, lowerBound)
     }
+
+    val eventsGroupedByTime3 = groupBy(validEvents, validEvents.head.timestamp.getMillis, sendForgetMessageIntervalMillis )
+      { case (event, boundary, interval ) => event.timestamp.getMillis < boundary + interval }
+      { _ + _ }
+
+    output(eventsGroupedByTime3)
+
+
+
+    val eventsGroupedByTime4 = groupBy(validEvents, validEvents.head.timestamp, sendForgetMessageInterval )
+      { case (event, boundary, interval ) => event.timestamp.minus(interval.toMillis).isBefore(boundary) }
+      { case (boundary, interval ) => boundary.plus(interval.toMillis) }
+
+    output(eventsGroupedByTime4)
+
+
 
     var n = 0
     eventsGroupedByTime2.foreach{ events =>
@@ -158,7 +196,7 @@ object CountPageEventsFromFile {
         counter ! CounterTreeMessage.UpdateCountFor(event)
         n += 1
       }
-      counter ! CounterTreeMessage.ForgetOldCounts(forgetMessageValueSeconds)
+      counter ! CounterTreeMessage.ForgetOldCounts(forgetMessageIntervalSeconds)
       n += 1
     }
 
